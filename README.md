@@ -1,6 +1,10 @@
 # Skiftschema
 
+![Vibecoded with Codex](docs/codex-badge.svg)
+
 Skiftschema is a Swedish-language mobile app for looking up your work shifts. It includes the 2026 and 2027 rosters for **5-skift** and **6-skift**. The schedules work offline, and your preferences and overtime are stored on your device.
+
+<img src="docs/screenshots/month.png" width="24%" alt="Monthly calendar"><img src="docs/screenshots/week.png" width="24%" alt="Weekly calendar"><img src="docs/screenshots/day.png" width="24%" alt="Day sheet with shift times and overtime options"><img src="docs/screenshots/palettes.png" width="24%" alt="Color palette settings in light mode">
 
 Android has been tested on a physical phone. The project is also configured for iPhone, where a device build and signing still need to be verified.
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="133" height="22" viewBox="0 0 133 22" role="img" aria-labelledby="title">
+  <title id="title">Vibecoded with Codex</title>
+  <rect width="133" height="22" rx="4" fill="#30363d"/>
+  <path d="M90 0h39a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H90z" fill="#08735b"/>
+  <g fill="#fff" font-family="Verdana, Geneva, sans-serif" font-size="11" text-anchor="middle">
+    <text x="45" y="15">Vibecoded with</text>
+    <text x="111.5" y="15">Codex</text>
+  </g>
+</svg>
