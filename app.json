@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Skiftschema",
+    "slug": "skiftschema",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
+    "android": {
+      "package": "se.skiftschema.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-foreground.png",
+        "backgroundColor": "#08735B"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "se.skiftschema.app",
+      "supportsTablet": false
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Skiftschema behöver kalenderåtkomst för att exportera dina valda pass."
+        }
+      ],
+      "expo-sqlite"
+    ],
+    "icon": "./assets/icon.png"
+  }
+}
