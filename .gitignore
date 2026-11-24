@@ -25,6 +25,9 @@ npm-debug.log*
 *.mobileprovision
 *.provisionprofile
 
+# Original roster PDFs are kept locally
+/docs/Skiftschema*.pdf
+
 # Install packages
 *.apk
 *.aab

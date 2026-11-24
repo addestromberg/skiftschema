@@ -25,7 +25,7 @@ Run `npm run android` with the Android SDK and a connected Android device or emu
 
 ## Import another year
 
-The PDF reader supports the four supplied 2026 and 2027 rosters. Reproduce the bundled data with these commands.
+The PDF reader supports the four original 2026 and 2027 rosters. Place local copies in `docs/` to reproduce the bundled JSON with the commands below. Git ignores those PDF files.
 
 ```sh
 npm run import:schedule -- docs/Skiftschema-2026.pdf --schedule five --year 2026
