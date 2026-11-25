@@ -10,7 +10,9 @@ import android.provider.CalendarContract.Calendars;
 import android.provider.CalendarContract.Events;
 import android.provider.CalendarContract.Reminders;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -24,7 +26,19 @@ final class PhoneCalendar {
     private static final String MARKER = "Skiftschema/v1:";
     private final ContentResolver resolver;
 
-    record Event(String key, String title, long start, long end, boolean allDay, Integer reminder) {}
+    record Event(String key, String title, long start, long end, boolean allDay, Integer reminder) {
+        private static LocalDate allDayDate(long encoded) {
+            return Instant.ofEpochMilli(encoded).atOffset(ZoneOffset.UTC).toLocalDate();
+        }
+
+        boolean past(long now) {
+            return allDay ? !allDayDate(end).isAfter(Schedule.civilDate(now)) : end <= now;
+        }
+
+        boolean future(long now) {
+            return allDay ? allDayDate(start).isAfter(Schedule.civilDate(now)) : start > now;
+        }
+    }
     private record Existing(long id, Event event) {}
     enum Range { KEEP, FUTURE, ALL }
 
@@ -99,10 +113,10 @@ final class PhoneCalendar {
                         .get(Schedule.yearKey(roster.unit(), roster.year())));
                 if (vacation == null) continue;
                 for (Schedule.Period period : vacation.periods()) {
-                    long end = Schedule.utcDay(period.end().plusDays(1));
                     String key = "vacation:" + roster.unit() + ":" + period.start();
-                    if (end > now) events.put(key, new Event(key, "Semester",
-                            Schedule.utcDay(period.start()), end, true, null));
+                    Event event = new Event(key, "Semester", Schedule.utcDay(period.start()),
+                            Schedule.utcDay(period.end().plusDays(1)), true, null);
+                    if (!event.past(now)) events.put(key, event);
                 }
             }
         }
@@ -166,7 +180,7 @@ final class PhoneCalendar {
         ArrayList<ContentProviderOperation> batch = new ArrayList<>();
         for (Existing existing : list(calendar, true)) {
             Event event = existing.event;
-            if (!profile.export.categories[category(event.key)] || event.end <= now) continue;
+            if (!profile.export.categories[category(event.key)] || event.past(now)) continue;
             Event target = wanted.remove(event.key);
             if (target == null) batch.add(deleteEvent(existing.id));
             else if (!target.equals(event)) write(batch, calendar, existing.id, target);
@@ -183,7 +197,7 @@ final class PhoneCalendar {
         ArrayList<ContentProviderOperation> batch = new ArrayList<>();
         for (Existing existing : list(calendar, false)) {
             Event event = existing.event;
-            if (category(event.key) == category && (range == Range.ALL || event.start > now)) {
+            if (category(event.key) == category && (range == Range.ALL || event.future(now))) {
                 batch.add(deleteEvent(existing.id));
                 if (batch.size() >= 60) apply(batch);
             }
