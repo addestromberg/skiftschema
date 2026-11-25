@@ -59,7 +59,7 @@ public final class MainActivity extends Activity {
     private boolean retryAutomatic;
     private boolean resumed;
     private boolean destroyed;
-    private boolean loadFailed;
+    private String loadError;
     private long exportRevision;
     private Profile.Store store;
     private PhoneCalendar phoneCalendar;
@@ -91,18 +91,22 @@ public final class MainActivity extends Activity {
         root = new FrameLayout(this);
         configureWindow(getWindow(), root);
         setContentView(root);
+        loadProfile();
+    }
+
+    private void loadProfile() {
+        loadError = null;
         render();
         disk.execute(() -> {
+            Schedule loadedSchedule;
             try {
-                Schedule loadedSchedule = new Schedule(getAssets());
-                Profile loaded;
-                try {
-                    loaded = store.load();
-                } catch (Exception error) {
-                    Log.e(TAG, "Could not read profile", error);
-                    loaded = new Profile();
-                }
-                Profile loadedProfile = loaded;
+                loadedSchedule = new Schedule(getAssets());
+            } catch (Exception error) {
+                showLoadError("Schemat kunde inte läsas.", error);
+                return;
+            }
+            try {
+                Profile loadedProfile = store.load();
                 main.post(() -> {
                     if (destroyed) return;
                     schedule = loadedSchedule;
@@ -112,13 +116,17 @@ public final class MainActivity extends Activity {
                     if (resumed) sync(false);
                 });
             } catch (Exception error) {
-                Log.e(TAG, "Could not read bundled rosters", error);
-                main.post(() -> {
-                    if (destroyed) return;
-                    loadFailed = true;
-                    render();
-                });
+                showLoadError("Dina sparade uppgifter kunde inte läsas.", error);
             }
+        });
+    }
+
+    private void showLoadError(String message, Exception error) {
+        Log.e(TAG, message, error);
+        main.post(() -> {
+            if (destroyed) return;
+            loadError = message;
+            render();
         });
     }
 
@@ -219,9 +227,15 @@ public final class MainActivity extends Activity {
         Ui.Stack screen = ui.column(0);
         root.addView(screen, new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
         pageScroll = null;
-        if (profile == null) {
-            ui.stretch(screen, ui.centered(loadFailed ? "Schemat kunde inte läsas." : "Läser schemat…",
-                    14, ui.c.muted, false));
+        if (loadError != null) {
+            Ui.Stack recovery = ui.column(12);
+            recovery.setGravity(Gravity.CENTER);
+            ui.pad(recovery, 24);
+            recovery.addView(ui.centered(loadError, 14, ui.c.muted, false));
+            recovery.addView(ui.button("Försök igen", this::loadProfile));
+            ui.stretch(screen, recovery);
+        } else if (profile == null) {
+            ui.stretch(screen, ui.centered("Läser schemat…", 14, ui.c.muted, false));
         } else if (profile.unit == null) {
             onboarding(screen);
         } else {

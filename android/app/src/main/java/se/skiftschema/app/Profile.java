@@ -160,6 +160,7 @@ final class Profile {
     static final class Store {
         private final File file;
         private SQLiteDatabase database;
+        private boolean loaded;
 
         Store(Context context) {
             // Expo SQLite stored the profile here on Android.
@@ -172,7 +173,8 @@ final class Profile {
                 if (!directory.isDirectory() && !directory.mkdirs()) {
                     throw new IllegalStateException("Could not create database directory");
                 }
-                database = SQLiteDatabase.openOrCreateDatabase(file, null);
+                // Keep corrupt files for recovery instead of letting Android delete them.
+                database = SQLiteDatabase.openOrCreateDatabase(file.getPath(), null, db -> {});
                 database.enableWriteAheadLogging();
                 database.execSQL("CREATE TABLE IF NOT EXISTS state (id TEXT PRIMARY KEY, value TEXT NOT NULL)");
             }
@@ -180,13 +182,21 @@ final class Profile {
         }
 
         Profile load() throws JSONException {
+            loaded = false;
+            Profile profile;
             try (Cursor cursor = open().rawQuery("SELECT value FROM state WHERE id = ?",
                     new String[]{"profile"})) {
-                return cursor.moveToFirst() ? parse(cursor.getString(0)) : new Profile();
+                profile = cursor.moveToFirst() ? parse(cursor.getString(0)) : new Profile();
+            } catch (JSONException | RuntimeException error) {
+                close();
+                throw error;
             }
+            loaded = true;
+            return profile;
         }
 
         void save(String json) {
+            if (!loaded) throw new IllegalStateException("Load the profile before saving it");
             ContentValues values = new ContentValues();
             values.put("id", "profile");
             values.put("value", json);
@@ -194,7 +204,11 @@ final class Profile {
         }
 
         void close() {
-            if (database != null) database.close();
+            loaded = false;
+            if (database != null) {
+                database.close();
+                database = null;
+            }
         }
     }
 }
