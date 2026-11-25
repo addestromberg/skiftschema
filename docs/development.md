@@ -1,6 +1,6 @@
 # Skiftschema development
 
-The editable design is [Skiftschema.figcraft](Skiftschema.figcraft). It specifies the Swedish screens, layout, and the six palettes in Light and Dark. System follows the device. Select the palette under **Utseende → Färgpalett**. Palette tokens live in `src/theme.tsx`. Havsblå, Plommon, and Bärnsten use Material HCT tones. Nord adapts the [Nord color palettes](https://www.nordtheme.com/docs/colors-and-palettes/). Cthulhu Deep One adapts the [Omarchy theme by sonderbydk](https://github.com/sonderbydk/omarchy-cthulhu-deep-one-theme) and pairs its dark colors with a new Light version. Treat the dated roster PDFs as the source for actual assignments, closures, and vacation periods. The 2027 five-shift PDF shows yellow from 19 July to 8 August and green from 9 to 29 August.
+The editable design is [Skiftschema.figcraft](Skiftschema.figcraft). It specifies the Swedish screens, layout, and the six palettes in Light and Dark. System follows the device. Select the palette under **Utseende → Färgpalett**. Android palette tokens live in `android/app/src/main/java/se/skiftschema/app/Palette.java`. The Expo preview uses `src/theme.tsx`. Havsblå, Plommon, and Bärnsten use Material HCT tones. Nord adapts the [Nord color palettes](https://www.nordtheme.com/docs/colors-and-palettes/). Cthulhu Deep One adapts the [Omarchy theme by sonderbydk](https://github.com/sonderbydk/omarchy-cthulhu-deep-one-theme) and pairs its dark colors with a new Light version. Treat the dated roster PDFs as the source for actual assignments, closures, and vacation periods. The 2027 five-shift PDF shows yellow from 19 July to 8 August and green from 9 to 29 August.
 
 ## Preview and builds
 
@@ -11,7 +11,7 @@ npm run preview
 
 Open http://localhost:8081/?demo=1 to review July 2027 with 5-skift, crew B, and yellow vacation. Open http://localhost:8081/ without the query to review onboarding and the calendar for the current date. These previews use separate browser storage. The demo freezes the clock. The browser simulates phone-calendar actions. No web app is published.
 
-Run `npm run android` with the Android SDK and a connected Android device or emulator for native development. Browser preview cannot verify the real calendar provider, Android permissions, or touch gestures. Run `npm run check` and `npm test` before handing off changes. Keep any future Android release keystore and credentials outside Git. The first public download is intended to be a locally signed APK on GitHub Releases.
+Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From that directory, run `./gradlew :app:assembleDebug :app:lintDebug`. Use `./gradlew :app:installDebug` with a connected phone or emulator to verify the calendar provider, Android permissions, and touch gestures. The Android build bundles the matching JSON files in `data/`. Keep release signing credentials outside Git.
 
 ## Scheduling rules
 

@@ -4,7 +4,6 @@
 /dist/
 /web-build/
 /coverage/
-/android/
 /ios/
 *.tsbuildinfo
 npm-debug.log*

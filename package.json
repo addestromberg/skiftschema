@@ -6,7 +6,7 @@
   "scripts": {
     "start": "expo start --localhost",
     "preview": "expo start --web --localhost",
-    "android": "expo run:android",
+    "android": "cd android && ./gradlew :app:installDebug",
     "check": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "import:schedule": "python3 scripts/import_schedule.py"

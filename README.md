@@ -6,7 +6,7 @@ Skiftschema is a Swedish-language mobile app for looking up your work shifts. It
 
 <img src="docs/screenshots/month.png" width="24%" alt="Monthly calendar"><img src="docs/screenshots/week.png" width="24%" alt="Weekly calendar"><img src="docs/screenshots/day.png" width="24%" alt="Day sheet with shift times and overtime options"><img src="docs/screenshots/palettes.png" width="24%" alt="Color palette settings in light mode">
 
-Android has been tested on a physical phone. The project is also configured for iPhone, where a device build and signing still need to be verified.
+This branch builds Skiftschema for Android with native Android views and Java. The Expo project also provides the iOS and browser versions.
 
 ## Using the app
 
@@ -24,25 +24,25 @@ On Android, the exported calendar is stored locally. If it’s missing from Goog
 
 ## Development
 
-The app is built with Expo, React Native, and TypeScript. It reads the bundled JSON rosters in `data/` and uses SQLite for local app data.
+Open `android/` in Android Studio, or build from the command line with JDK 17 and Android SDK Platform 35. The app supports Android 7.0 (API 24) and later.
 
-Use Node.js 22.13+, 24.3+, or 26+. Install the locked dependencies and start the browser preview.
+```sh
+cd android
+./gradlew :app:assembleDebug :app:lintDebug
+./gradlew :app:installDebug
+```
+
+Launch **Skiftschema** from the connected phone or emulator. The app bundles every matching roster in `data/` and stores preferences, overtime, and export settings in SQLite. Installing a build signed with the same key upgrades the existing Android app and carries over its local data. Keep signing keys and release credentials outside the repository.
+
+The Expo browser preview uses Node.js 22.13+, 24.3+, or 26+.
 
 ```sh
 npm ci
 npm run preview
+npm run check
+npm test
 ```
 
-The demo opens a preconfigured July 2027 calendar. The default preview starts with onboarding. Both simulate phone calendar export. [Demo](http://localhost:8081/?demo=1) · [Default preview](http://localhost:8081/)
+The browser preview opens with onboarding. Its demo opens July 2027 with a preset crew and vacation group. Both simulate phone calendar export. [Demo](http://localhost:8081/?demo=1) · [Default preview](http://localhost:8081/)
 
-To build and install the Android debug app, set up the Android SDK and JDK, then connect a phone with USB debugging enabled or start an emulator.
-
-```sh
-npm run android
-```
-
-Expo generates the native projects from `app.json`. If a USB-connected debug build can’t reach the development server, run `adb reverse tcp:8081 tcp:8081`.
-
-Run `npm run check` for TypeScript and `npm test` for the automated tests.
-
-Keep signing keys and release credentials outside the repository. [Schedule import guide](docs/development.md) · [Editable FigCraft design](docs/Skiftschema.figcraft)
+[Schedule import guide](docs/development.md) · [Editable FigCraft design](docs/Skiftschema.figcraft)
