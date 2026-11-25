@@ -490,24 +490,44 @@ final class CalendarPage {
             outgoing = previous;
             getOverlay().add(previous);
             addView(incoming, new LayoutParams(Ui.MATCH, Ui.WRAP));
-            var exit = previous.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
-            var enter = incoming.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
-            if (transition == Transition.NEXT || transition == Transition.PREVIOUS) {
-                float offset = transition == Transition.NEXT ? getWidth() : -getWidth();
+            float offset = switch (transition) {
+                case NEXT -> getWidth();
+                case PREVIOUS -> -getWidth();
+                default -> 0;
+            };
+            boolean zoomIn = transition == Transition.ZOOM_IN;
+            if (offset != 0) {
                 incoming.setTranslationX(offset);
-                exit.translationX(-offset);
-                enter.translationX(0);
             } else {
-                boolean zoomIn = transition == Transition.ZOOM_IN;
                 previous.setPivotX(focus.exactCenterX());
                 previous.setPivotY(focus.exactCenterY());
                 incoming.setPivotX(focus.exactCenterX());
                 incoming.setPivotY(focus.exactCenterY());
                 float startScale = zoomIn ? .88f : 1.12f;
-                float endScale = zoomIn ? 1.12f : .88f;
                 incoming.setScaleX(startScale);
                 incoming.setScaleY(startScale);
                 incoming.setAlpha(0);
+            }
+
+            // Start on the next frame after layout so measuring the new grid does not use up the animation.
+            incoming.addOnLayoutChangeListener(new OnLayoutChangeListener() {
+                @Override public void onLayoutChange(View view, int left, int top, int right, int bottom,
+                                                     int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                    view.removeOnLayoutChangeListener(this);
+                    view.postOnAnimation(() -> animate(previous, incoming, offset, zoomIn));
+                }
+            });
+        }
+
+        private void animate(View previous, View incoming, float offset, boolean zoomIn) {
+            if (outgoing != previous || period != incoming) return;
+            var exit = previous.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
+            var enter = incoming.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
+            if (offset != 0) {
+                exit.translationX(-offset);
+                enter.translationX(0);
+            } else {
+                float endScale = zoomIn ? 1.12f : .88f;
                 exit.scaleX(endScale).scaleY(endScale).alpha(0);
                 enter.scaleX(1).scaleY(1).alpha(1);
             }
