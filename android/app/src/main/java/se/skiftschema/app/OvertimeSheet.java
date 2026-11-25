@@ -1,11 +1,11 @@
 package se.skiftschema.app;
 
+import android.view.Gravity;
 import android.view.View;
 import android.widget.TextView;
 
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,8 +19,8 @@ final class OvertimeSheet {
     private Schedule.Shift shift;
     private Schedule.Span official;
     private boolean partial;
-    private long start;
-    private long end;
+    private OvertimeTime start;
+    private OvertimeTime end;
 
     OvertimeSheet(MainActivity app, LocalDate day) {
         this.app = app;
@@ -89,8 +89,8 @@ final class OvertimeSheet {
         Schedule.Work extra = existing();
         official = app.schedule.span(app.profile, shift);
         partial = extra != null && !extra.span().equals(official);
-        start = extra == null ? official.start() : extra.span().start();
-        end = extra == null ? official.end() : extra.span().end();
+        start = OvertimeTime.from(extra == null ? official.start() : extra.span().start());
+        end = OvertimeTime.from(extra == null ? official.end() : extra.span().end());
         if (extra == null && !app.profile.owns(item)) edit();
         else menu();
     }
@@ -151,12 +151,14 @@ final class OvertimeSheet {
                     panel.addView(mode);
                     Ui.Stack status = ui.row(7);
                     ui.pad(status, 12);
+                    status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
                     TextView save = ui.button(ui.copy(UiCopy.SAVE_OVERTIME), Ui.PRIMARY, valid(), 48, this::commit);
                     Runnable refreshStatus = () -> status(status, save);
                     if (partial) {
                         int width = app.getResources().getDisplayMetrics().widthPixels;
                         boolean sideBySide = width >= ui.dp(332);
                         Ui.Stack pickers = sideBySide ? ui.row(12) : ui.column(12);
+                        if (sideBySide) pickers.setGravity(Gravity.TOP);
                         View from = timePicker(true, refreshStatus);
                         View until = timePicker(false, refreshStatus);
                         if (sideBySide) {
@@ -180,39 +182,54 @@ final class OvertimeSheet {
     }
 
     private View timePicker(boolean isStart, Runnable refreshStatus) {
-        long instant = isStart ? start : end;
+        String label = isStart ? "Från" : "Till";
         Ui.Stack picker = ui.column(7);
-        picker.addView(ui.headline(isStart ? "Från" : "Till", 14));
-        TextView date = ui.text(Schedule.dateLabel(Schedule.civilDate(instant)), 12, c.muted, false);
+        picker.addView(ui.headline(label, 14));
+        TextView date = ui.text("", 12, c.muted, false);
         picker.addView(date);
-        picker.addView(ui.timeWheel(Schedule.local(instant).toLocalTime(), time -> {
-            long selected = chooseTime(isStart, time);
+        TextView occurrence = ui.centered("", 13, c.ink, true);
+        ui.pad(occurrence, 8);
+        occurrence.setMinimumHeight(ui.dp(48));
+        ui.surface(occurrence, c.paper, 15, c.edge, 1);
+        ui.buttonRole(occurrence);
+        Runnable refreshPicker = () -> {
+            OvertimeTime value = isStart ? start : end;
+            date.setText(Schedule.dateLabel(value.wall().toLocalDate()));
+            occurrence.setVisibility(value.isRepeated() ? View.VISIBLE : View.GONE);
+            if (value.isRepeated()) {
+                occurrence.setText(value.occurrenceLabel());
+                occurrence.setContentDescription(label + ", " + value.occurrenceLabel()
+                        + ". Byt till " + value.otherOccurrence().occurrenceLabel());
+            }
+        };
+        ui.click(occurrence, () -> {
+            if (!(isStart ? start : end).isRepeated()) return;
+            OvertimeTime other = (isStart ? start : end).otherOccurrence();
+            if (isStart) start = other;
+            else end = other;
+            refreshPicker.run();
+            refreshStatus.run();
+        });
+        picker.addView(ui.timeWheel((isStart ? start : end).wall().toLocalTime(), time -> {
+            OvertimeTime selected = (isStart ? start : end).withClock(time, official, isStart);
             if (isStart) start = selected;
             else end = selected;
-            date.setText(Schedule.dateLabel(Schedule.civilDate(selected)));
+            refreshPicker.run();
             refreshStatus.run();
         }));
+        picker.addView(occurrence);
+        refreshPicker.run();
         return picker;
     }
 
-    private long chooseTime(boolean isStart, LocalTime time) {
-        LocalDate current = Schedule.civilDate(isStart ? start : end);
-        LocalDate first = Schedule.civilDate(official.start());
-        LocalDate last = Schedule.civilDate(official.end());
-        Long candidate = null;
-        for (LocalDate date = first; !date.isAfter(last); date = date.plusDays(1)) {
-            long instant = Schedule.atTime(date, time);
-            if (isStart && (instant < official.start() || instant >= official.end())) continue;
-            if (!isStart && (instant <= official.start() || instant > official.end())) continue;
-            if (current.equals(date)) return instant;
-            if (candidate == null) candidate = instant;
-        }
-        return candidate != null ? candidate : Schedule.atTime(current, time);
+    private Schedule.Span chosenSpan() {
+        return partial ? new Schedule.Span(start.instant(), end.instant()) : official;
     }
 
-    private Schedule.Span chosenSpan() { return partial ? new Schedule.Span(start, end) : official; }
+    private boolean hasGap() { return partial && (start.isGap() || end.isGap()); }
 
     private boolean valid() {
+        if (hasGap()) return false;
         Schedule.Span picked = chosenSpan();
         return picked.start() < picked.end() && picked.start() >= official.start() && picked.end() <= official.end();
     }
@@ -225,9 +242,15 @@ final class OvertimeSheet {
         row.addView(ui.icon(valid ? R.drawable.ic_clock : R.drawable.ic_alert, color), ui.size(18, 18));
         NumberFormat format = NumberFormat.getNumberInstance(Schedule.SWEDISH);
         format.setMaximumFractionDigits(2);
-        Schedule.Span span = chosenSpan();
-        String text = valid ? format.format((span.end() - span.start()) / 3_600_000d) + " " + ui.copy(UiCopy.OVERTIME_HOURS)
-                : ui.warning("Välj en sluttid efter starttiden, inom passets gränser.");
+        String text;
+        if (valid) {
+            Schedule.Span span = chosenSpan();
+            text = format.format((span.end() - span.start()) / 3_600_000d) + " " + ui.copy(UiCopy.OVERTIME_HOURS);
+        } else if (hasGap()) {
+            text = ui.warning("Den valda tiden finns inte i Stockholm när klockan ställs fram. Välj en annan tid.");
+        } else {
+            text = ui.warning("Välj en sluttid efter starttiden, inom passets gränser.");
+        }
         ui.weight(row, ui.text(text, 13, color, true));
         ui.enabled(save, valid);
     }
