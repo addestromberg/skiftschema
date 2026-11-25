@@ -34,7 +34,7 @@ final class OvertimeSheet {
     void showDay() {
         List<Schedule.Shift> shifts = assignment == null ? Collections.emptyList() : assignment.shifts();
         Schedule.Vacation vacation = app.schedule.vacation(app.profile, unit, day);
-        String subtitle = Schedule.label(unit) + (shifts.isEmpty() ? "" : " · Välj pass för övertid");
+        String subtitle = Schedule.label(unit) + (shifts.isEmpty() ? "" : " · " + ui.copy(UiCopy.PICK_OVERTIME));
         app.sheet(Schedule.dateLabel(day), subtitle, false, null, panel -> {
             if (vacation != null) {
                 Ui.Stack note = ui.panel(0, c.vac, false);
@@ -45,7 +45,7 @@ final class OvertimeSheet {
             for (Schedule.Shift shift : shifts) panel.addView(shiftRow(shift));
             if (vacation == null && shifts.isEmpty()) {
                 String label = assignment != null && assignment.closure() != null ? assignment.closure()
-                        : app.schedule.roster(unit, day.getYear()) != null ? "Inga pass" : "Inget schema tillgängligt";
+                        : app.schedule.roster(unit, day.getYear()) != null ? "Inga pass" : ui.copy(UiCopy.NO_SCHEDULE);
                 panel.addView(ui.headline(label, 14));
             }
             note(panel);
@@ -68,15 +68,17 @@ final class OvertimeSheet {
         Ui.Stack labels = ui.column(2);
         labels.addView(ui.headline(title, 14));
         labels.addView(ui.text(time, 12, c.muted, false));
-        if (own) labels.addView(ui.text("Ditt skiftlag", 12, c.mineInk, true));
-        if (extra != null) labels.addView(ui.text("Övertid · " + extra.span().label(), 12, c.otInk, true));
+        if (own) labels.addView(ui.text(ui.copy(UiCopy.YOUR_CREW), 12, c.mineInk, true));
+        if (extra != null) labels.addView(ui.text(ui.copy(UiCopy.OVERTIME) + " · " + extra.span().label(),
+                12, c.otInk, true));
         ui.weight(row, labels);
         if (!unavailable) {
             row.addView(ui.icon(R.drawable.ic_right, c.muted), ui.size(17, 17));
             ui.click(row, () -> choose(item));
         }
         row.setEnabled(!unavailable);
-        String action = unavailable ? "Ditt skiftlag" : extra != null ? "Hantera övertid" : "Välj";
+        String action = unavailable ? ui.copy(UiCopy.YOUR_CREW)
+                : extra != null ? ui.copy(UiCopy.MANAGE_OVERTIME) : "Välj";
         row.setContentDescription(action + ", " + title + ", " + time);
         ui.buttonRole(row);
         return row;
@@ -111,15 +113,18 @@ final class OvertimeSheet {
             Ui.Stack saved = ui.panel(0, extra == null ? c.subtle : c.ot, false);
             ui.pad(saved, 12);
             saved.addView(ui.text(extra == null ? "Ordinarie skiftlag " + shift.crew()
-                    : "Sparad övertid · " + extra.span().label(), 14, extra == null ? c.ink : c.otInk, true));
+                    : ui.copy(UiCopy.LOGGED_OVERTIME) + " · " + extra.span().label(),
+                    14, extra == null ? c.ink : c.otInk, true));
             panel.addView(saved);
             note(panel);
             if (!app.profile.owns(shift)) {
-                panel.addView(ui.button(extra == null ? "Markera övertid" : "Ändra övertid", Ui.SECONDARY, this::edit));
+                panel.addView(ui.button(ui.copy(extra == null ? UiCopy.ADD_OVERTIME : UiCopy.EDIT_OVERTIME),
+                        Ui.SECONDARY, this::edit));
             }
             if (extra != null) {
                 panel.addView(ui.divider());
-                panel.addView(ui.button("Ta bort övertid", Ui.QUIET, () -> app.confirm("Ta bort övertid?",
+                String removeLabel = ui.copy(UiCopy.REMOVE_OVERTIME);
+                panel.addView(ui.button(removeLabel, Ui.QUIET, () -> app.confirm(removeLabel + "?",
                         extra.span().label(), "Avbryt", "Ta bort", Ui.DANGER, this::menu, () -> {
                             app.profile.overtime.remove(shift.key());
                             updated();
@@ -129,7 +134,8 @@ final class OvertimeSheet {
     }
 
     private void edit() {
-        app.sheet(existing() == null ? "Markera övertid" : "Ändra övertid", Schedule.dateLabel(day) + " · " + title(),
+        String heading = ui.copy(existing() == null ? UiCopy.ADD_OVERTIME : UiCopy.EDIT_OVERTIME);
+        app.sheet(heading, Schedule.dateLabel(day) + " · " + title(),
                 false, null, panel -> {
                     Ui.Stack mode = ui.row(7);
                     ui.weight(mode, ui.button("Hela passet", partial ? Ui.SECONDARY : Ui.PRIMARY, () -> {
@@ -145,7 +151,7 @@ final class OvertimeSheet {
                     panel.addView(mode);
                     Ui.Stack status = ui.row(7);
                     ui.pad(status, 12);
-                    TextView save = ui.button("Spara övertid", Ui.PRIMARY, valid(), 48, this::commit);
+                    TextView save = ui.button(ui.copy(UiCopy.SAVE_OVERTIME), Ui.PRIMARY, valid(), 48, this::commit);
                     Runnable refreshStatus = () -> status(status, save);
                     if (partial) {
                         int width = app.getResources().getDisplayMetrics().widthPixels;
@@ -220,8 +226,8 @@ final class OvertimeSheet {
         NumberFormat format = NumberFormat.getNumberInstance(Schedule.SWEDISH);
         format.setMaximumFractionDigits(2);
         Schedule.Span span = chosenSpan();
-        String text = valid ? format.format((span.end() - span.start()) / 3_600_000d) + " timmar övertid"
-                : "Välj en sluttid efter starttiden, inom passets gränser.";
+        String text = valid ? format.format((span.end() - span.start()) / 3_600_000d) + " " + ui.copy(UiCopy.OVERTIME_HOURS)
+                : ui.warning("Välj en sluttid efter starttiden, inom passets gränser.");
         ui.weight(row, ui.text(text, 13, color, true));
         ui.enabled(save, valid);
     }
@@ -231,7 +237,7 @@ final class OvertimeSheet {
         Schedule.Work work = new Schedule.Work(shift, chosenSpan(), true);
         Schedule.Work conflict = app.schedule.conflict(app.profile, work);
         if (conflict == null) save(work);
-        else app.confirm("Passet överlappar",
+        else app.confirm(ui.warning("Passet överlappar"),
                 "Ett annat pass överlappar " + Schedule.dateLabel(Schedule.civilDate(conflict.span().start()))
                         + " kl. " + conflict.span().label() + ".",
                 "Gå tillbaka", "Spara ändå", Ui.PRIMARY, this::edit, () -> save(work));

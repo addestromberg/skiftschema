@@ -121,7 +121,7 @@ final class CalendarPage {
         previousPeriod = ui.iconButton(R.drawable.ic_left, "Föregående månad", true, () -> move(-1));
         nextPeriod = ui.iconButton(R.drawable.ic_right, "Nästa månad", true, () -> move(1));
         navigation.addView(previousPeriod);
-        navigation.addView(ui.tag("Idag", c.action, c.paper, 8, () -> moveTo(week, today, null)));
+        navigation.addView(ui.tag(ui.copy(UiCopy.TODAY), c.action, c.paper, 8, () -> moveTo(week, today, null)));
         navigation.addView(nextPeriod);
         body.addView(navigation);
 
@@ -143,7 +143,7 @@ final class CalendarPage {
     }
 
     private TextView modeTab(boolean toWeek) {
-        TextView tab = ui.centered(toWeek ? "Vecka" : "Månad", 12, c.ink, true);
+        TextView tab = ui.centered(ui.copy(toWeek ? UiCopy.WEEK : UiCopy.MONTH), 12, c.ink, true);
         tab.setMinimumWidth(ui.dp(75));
         tab.setMinimumHeight(ui.dp(30));
         ui.buttonRole(tab);
@@ -164,7 +164,7 @@ final class CalendarPage {
 
     private void showPeriod(Transition transition, LocalDate focus) {
         LocalDate start = periodStart();
-        String title = week ? "Vecka " + start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+        String title = week ? ui.copy(UiCopy.WEEK) + " " + start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                 : Schedule.month(start) + " " + start.getYear();
         periodTitle.setText(title);
         dateButton.setContentDescription("Gå till månad, " + title);
@@ -203,7 +203,7 @@ final class CalendarPage {
             empty.setGravity(Gravity.CENTER);
             ui.pad(empty, 18);
             empty.addView(ui.icon(R.drawable.ic_calendar, c.muted), ui.size(24, 24));
-            empty.addView(ui.centered("Inget schema tillgängligt", 17, c.ink, true));
+            empty.addView(ui.centered(ui.copy(UiCopy.NO_SCHEDULE), 17, c.ink, true));
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.CENTER);
             params.leftMargin = ui.dp(12);
             params.rightMargin = ui.dp(12);
@@ -229,9 +229,9 @@ final class CalendarPage {
         daysUntilWork = diff;
         hero.removeAllViews();
         Ui.Stack header = ui.row(4);
-        ui.weight(header, ui.text("Nästa pass", 12, c.heroMuted, true));
+        ui.weight(header, ui.text(ui.copy(UiCopy.NEXT_SHIFT), 12, c.heroMuted, true));
         if (work != null) {
-            String when = diff == 0 ? "Idag" : diff == 1 ? "Imorgon" : "Om " + diff + " dagar";
+            String when = diff == 0 ? ui.copy(UiCopy.TODAY) : diff == 1 ? "Imorgon" : "Om " + diff + " dagar";
             header.addView(ui.tag(when, c.heroBadgeInk, c.heroBadge, 12, null), ui.size(Ui.WRAP, Ui.WRAP));
         }
         hero.addView(header);
@@ -241,7 +241,7 @@ final class CalendarPage {
         ui.weight(main, ui.text(label, 25, c.heroMain, true));
         main.addView(ui.icon(R.drawable.ic_clock, c.heroMuted), ui.size(20, 20));
         hero.addView(main);
-        if (work != null) hero.addView(ui.text((work.overtime() ? "Övertid" : work.shift().title())
+        if (work != null) hero.addView(ui.text((work.overtime() ? ui.copy(UiCopy.OVERTIME) : work.shift().title())
                 + " · Skift " + work.shift().crew(), 11, c.heroMuted, false));
     }
 
@@ -251,16 +251,17 @@ final class CalendarPage {
             Ui.Stack selection = ui.row(4);
             ui.surface(selection, c.mine, 17, c.line, 1);
             ui.pad(selection, 12, 8, 8, 8);
-            ui.weight(selection, ui.text("Vald dag · " + Schedule.dateLabel(selected), 13, c.mineInk, true));
+            ui.weight(selection, ui.text(ui.copy(UiCopy.SELECTED_DAY) + " · " + Schedule.dateLabel(selected),
+                    13, c.mineInk, true));
             selection.addView(ui.button("Visa pass", Ui.SECONDARY, true, 40, () -> openDay(selected)), ui.size(Ui.WRAP, Ui.WRAP));
             footer.addView(selection);
         } else if (covered) {
             Ui.Stack legend = ui.row(13);
             ui.pad(legend, 3, 0, 3, 0);
             legend.setMinimumHeight(ui.dp(24));
-            legend.addView(legend("Ditt pass", c.mine, c.mineInk));
+            legend.addView(legend(ui.copy(UiCopy.YOUR_SHIFT), c.mine, c.mineInk));
             if ("five".equals(app.profile.unit)) legend.addView(legend("Semester", c.vac, c.vacInk));
-            legend.addView(legend("Övertid", c.ot, c.otInk));
+            legend.addView(legend(ui.copy(UiCopy.OVERTIME), c.ot, c.otInk));
             footer.addView(legend);
         }
     }
@@ -338,7 +339,7 @@ final class CalendarPage {
         for (Schedule.Shift shift : shifts) {
             description.append(", ").append(Schedule.SLOTS[shift.slot()]).append(" skift ").append(shift.crew());
         }
-        if (overtime) description.append(", Övertid");
+        if (overtime) description.append(", ").append(ui.copy(UiCopy.OVERTIME));
         cell.setContentDescription(description);
         ui.buttonRole(cell);
         ui.click(cell, () -> tap(day));

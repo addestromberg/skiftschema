@@ -17,6 +17,7 @@ final class Profile {
     String unit;
     String appearance = "system";
     String accent = "forest";
+    boolean unhinged;
     final Map<String, String> crews = new LinkedHashMap<>();
     final Map<String, String> vacation = new LinkedHashMap<>();
     final Map<String, Schedule.Times> overrides = new LinkedHashMap<>();
@@ -57,6 +58,7 @@ final class Profile {
             profile.unit = string(prefs, "unit");
             profile.appearance = prefs.optString("appearance", "system");
             profile.accent = prefs.optString("accent", "forest");
+            profile.unhinged = prefs.optBoolean("unhinged");
             readStrings(prefs.optJSONObject("crews"), profile.crews);
             readStrings(prefs.optJSONObject("vacation"), profile.vacation);
             JSONObject times = prefs.optJSONObject("overrides");
@@ -118,6 +120,7 @@ final class Profile {
         put(prefs, "unit", unit);
         put(prefs, "appearance", appearance);
         put(prefs, "accent", accent);
+        put(prefs, "unhinged", unhinged);
         put(prefs, "crews", new JSONObject(crews));
         JSONObject groups = new JSONObject();
         vacation.forEach((key, value) -> put(groups, key, value));

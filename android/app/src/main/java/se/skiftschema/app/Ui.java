@@ -32,10 +32,20 @@ final class Ui {
     static final int PRIMARY = 0, SECONDARY = 1, QUIET = 2, DANGER = 3;
     final MainActivity activity;
     final Palette c;
+    private final boolean unhinged;
 
     Ui(MainActivity activity, Palette palette) {
         this.activity = activity;
         c = palette;
+        unhinged = activity.profile != null && activity.profile.unhinged;
+    }
+
+    String copy(UiCopy label) {
+        return label.text(unhinged);
+    }
+
+    String warning(String message) {
+        return unhinged ? "ASCHTUNG! " + message : message;
     }
 
     int dp(float value) {
@@ -255,7 +265,7 @@ final class Ui {
         pad(row, 24, 12, 24, 12);
         if (back == null) row.addView(iconTile(R.drawable.ic_calendar, 35, 21, c.onAction, c.action, 10, false));
         else row.addView(iconButton(R.drawable.ic_back, "Tillbaka", false, back));
-        row.addView(headline(title == null ? "Skiftschema" : title, 22));
+        row.addView(headline(title == null ? copy(UiCopy.APP_NAME) : title, 22));
         return row;
     }
 
@@ -274,7 +284,7 @@ final class Ui {
         tabs.setGravity(Gravity.CENTER);
         pad(tabs, 0, 7, 0, 7);
         String[] routes = {"calendar", "prefs"};
-        String[] names = {"Schema", "Preferenser"};
+        String[] names = {copy(UiCopy.CALENDAR), "Preferenser"};
         int[] icons = {R.drawable.ic_calendar, R.drawable.ic_settings};
         for (int i = 0; i < routes.length; i++) {
             String route = routes[i];

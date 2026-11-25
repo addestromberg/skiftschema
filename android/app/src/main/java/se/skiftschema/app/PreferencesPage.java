@@ -82,7 +82,8 @@ final class PreferencesPage {
         page.addView(ui.headline("Preferenser", 37));
         page.addView(ui.section("Ditt schema"));
         Ui.Stack mySchedule = ui.panel(0, c.paper, true);
-        mySchedule.addView(setting("Schema", Schedule.label(unit), R.drawable.ic_layers, this::chooseScheme));
+        mySchedule.addView(setting(ui.copy(UiCopy.CALENDAR), Schedule.label(unit), R.drawable.ic_layers,
+                this::chooseScheme));
         line(mySchedule, setting("Skiftlag", profile.crews.get(unit), R.drawable.ic_calendar,
                 () -> chooseCrew(unit, false, true)));
         if ("five".equals(unit)) {
@@ -268,6 +269,11 @@ final class PreferencesPage {
 
     private void timing(Ui.Stack page) {
         String unit = profile.unit;
+        page.addView(singleSetting(ui.setting("Unhinged", "Byter ut vissa etiketter mot satir.", null,
+                0, profile.unhinged, () -> {
+                    profile.unhinged = !profile.unhinged;
+                    app.preferencesChanged(false);
+                })));
         page.addView(ui.headline("Schematider", 35));
         page.addView(ui.muted("Anpassa tiderna för det valda schemaåret."));
         Ui.Stack tags = ui.row(8);
@@ -287,7 +293,7 @@ final class PreferencesPage {
         if (timingError != null) {
             Ui.Stack warning = ui.panel(0, c.warn, true);
             ui.pad(warning, 12);
-            warning.addView(ui.text(timingError, 14, c.warnInk, false));
+            warning.addView(ui.text(ui.warning(timingError), 14, c.warnInk, false));
             page.addView(warning);
         }
         page.addView(ui.button("Spara schematider", () -> saveTiming(false)));
@@ -370,7 +376,7 @@ final class PreferencesPage {
             ui.pad(info, 15);
             Ui.Stack title = ui.row(7);
             title.addView(ui.icon(out.rejected ? R.drawable.ic_alert : R.drawable.ic_calendar, c.muted), ui.size(20, 20));
-            ui.weight(title, ui.headline(out.rejected ? "Kalenderåtkomst saknas" : "Exporten är av", 14));
+            ui.weight(title, ui.headline(out.rejected ? ui.warning("Kalenderåtkomst saknas") : "Exporten är av", 14));
             info.addView(title);
             info.addView(ui.text(out.rejected ? "Tillåt kalenderåtkomst i telefonens inställningar."
                     : "Slå på export för att välja vilka pass som ska visas.", 13, c.muted, false));
