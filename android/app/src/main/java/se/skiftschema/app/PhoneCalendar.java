@@ -31,15 +31,17 @@ final class PhoneCalendar {
     PhoneCalendar(ContentResolver resolver) { this.resolver = resolver; }
 
     Long open(Long preferred, boolean create) throws Exception {
-        String[] columns = {Calendars._ID, Calendars.NAME, Calendars.OWNER_ACCOUNT};
+        String selection = Calendars.NAME + " = ? AND " + Calendars.ACCOUNT_NAME + " = ? AND "
+                + Calendars.ACCOUNT_TYPE + " = ? AND " + Calendars.OWNER_ACCOUNT + " = ?";
+        String[] account = {OWNER, OWNER, CalendarContract.ACCOUNT_TYPE_LOCAL, OWNER};
         Long local = null;
-        try (Cursor rows = resolver.query(Calendars.CONTENT_URI, columns,
-                Calendars.CALENDAR_DISPLAY_NAME + " = ?", new String[]{NAME}, null)) {
+        try (Cursor rows = resolver.query(Calendars.CONTENT_URI, new String[]{Calendars._ID},
+                selection, account, Calendars._ID)) {
             if (rows == null) throw new IllegalStateException("Calendar provider unavailable");
             while (rows.moveToNext()) {
                 long id = rows.getLong(0);
                 if (Objects.equals(id, preferred)) return id;
-                if (OWNER.equals(rows.getString(1)) && OWNER.equals(rows.getString(2))) local = id;
+                if (local == null) local = id;
             }
         }
         if (local != null || !create) return local;
