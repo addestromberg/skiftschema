@@ -1,10 +1,12 @@
 package se.skiftschema.app;
 
+import android.content.pm.LauncherApps;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.AdaptiveIconDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Process;
 
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -18,12 +20,19 @@ import static org.junit.Assert.assertTrue;
 public class LauncherIconTest {
     @Test @SdkSuppress(maxSdkVersion = 25)
     public void legacyLauncherIconHasTransparentMargins() {
-        Bitmap icon = render(launcherIcon());
-        assertEquals(Color.TRANSPARENT, icon.getPixel(4, 64));
-        assertEquals(Color.TRANSPARENT, icon.getPixel(64, 4));
-        assertEquals(Color.TRANSPARENT, icon.getPixel(123, 64));
-        assertEquals(Color.TRANSPARENT, icon.getPixel(64, 123));
-        assertEquals(255, Color.alpha(icon.getPixel(20, 64)));
+        var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        var metrics = context.getResources().getDisplayMetrics();
+        var activities = context.getSystemService(LauncherApps.class)
+                .getActivityList(context.getPackageName(), Process.myUserHandle());
+        assertEquals(1, activities.size());
+        Bitmap icon = render(activities.get(0).getIcon(metrics.densityDpi));
+        int margin = (int) (4.5f * metrics.density);
+        assertTrue(margin > 0);
+        assertEquals(Color.TRANSPARENT, icon.getPixel(margin - 1, 64));
+        assertEquals(Color.TRANSPARENT, icon.getPixel(64, margin - 1));
+        assertEquals(Color.TRANSPARENT, icon.getPixel(128 - margin, 64));
+        assertEquals(Color.TRANSPARENT, icon.getPixel(64, 128 - margin));
+        assertEquals(Color.rgb(8, 115, 91), icon.getPixel(margin + 1, 64));
     }
 
     @Test @SdkSuppress(minSdkVersion = 33)
