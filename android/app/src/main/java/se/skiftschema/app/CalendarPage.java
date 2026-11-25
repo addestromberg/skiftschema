@@ -183,8 +183,7 @@ final class CalendarPage {
         period.addView(grid, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP));
         dayViews.clear();
         if (week) {
-            grid.addView(ui.text(Schedule.dateLabel(start) + " – " + Schedule.dateLabel(start.plusDays(6))
-                    + " " + start.getYear(), 12, c.muted, false));
+            grid.addView(ui.text(Schedule.weekRangeLabel(start), 12, c.muted, false));
             for (LocalDate day : days) grid.addView(day(day));
         } else {
             Ui.Stack weekdays = ui.row(3);

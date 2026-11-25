@@ -34,6 +34,15 @@ public class ScheduleTest {
         assertTrue(morning.overlaps(new Schedule.Span(199, 300)));
     }
 
+    @Test public void weekRangeShowsBothYearsAcrossNewYear() {
+        LocalDate start = Schedule.weekStart(LocalDate.of(2027, 1, 1));
+        assertEquals("Mån 28 december 2026 – Sön 3 januari 2027", Schedule.weekRangeLabel(start));
+    }
+
+    @Test public void weekRangeShowsOneYearWithinTheSameYear() {
+        assertEquals("Mån 4 januari – Sön 10 januari 2027", Schedule.weekRangeLabel(LocalDate.of(2027, 1, 4)));
+    }
+
     private Duration nightDuration(LocalDate evening) {
         long start = Schedule.atTime(evening, LocalTime.of(22, 0));
         long end = Schedule.atTime(evening.plusDays(1), LocalTime.of(6, 0));

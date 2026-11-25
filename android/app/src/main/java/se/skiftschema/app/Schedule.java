@@ -294,6 +294,13 @@ final class Schedule {
         return day.minusDays(day.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
     }
 
+    static String weekRangeLabel(LocalDate start) {
+        LocalDate end = start.plusDays(6);
+        String first = dateLabel(start);
+        if (start.getYear() != end.getYear()) first += " " + start.getYear();
+        return first + " – " + dateLabel(end) + " " + end.getYear();
+    }
+
     static List<LocalDate> cells(LocalDate anchor, boolean week) {
         LocalDate first = week ? weekStart(anchor) : YearMonth.from(anchor).atDay(1);
         LocalDate start = weekStart(first);
