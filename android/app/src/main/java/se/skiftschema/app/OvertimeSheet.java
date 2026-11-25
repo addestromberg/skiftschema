@@ -18,7 +18,6 @@ final class OvertimeSheet {
     private final Palette c;
     private Schedule.Shift shift;
     private Schedule.Span official;
-    private boolean directEdit;
     private boolean partial;
     private long start;
     private long end;
@@ -87,11 +86,10 @@ final class OvertimeSheet {
         shift = item;
         Schedule.Work extra = existing();
         official = app.schedule.span(app.profile, shift);
-        directEdit = extra == null && !app.profile.owns(item);
         partial = extra != null && !extra.span().equals(official);
         start = extra == null ? official.start() : extra.span().start();
         end = extra == null ? official.end() : extra.span().end();
-        if (directEdit) edit();
+        if (extra == null && !app.profile.owns(item)) edit();
         else menu();
     }
 
@@ -132,7 +130,7 @@ final class OvertimeSheet {
 
     private void edit() {
         app.sheet(existing() == null ? "Markera övertid" : "Ändra övertid", Schedule.dateLabel(day) + " · " + title(),
-                false, directEdit ? this::showDay : this::menu, panel -> {
+                false, null, panel -> {
                     Ui.Stack mode = ui.row(7);
                     ui.weight(mode, ui.button("Hela passet", partial ? Ui.SECONDARY : Ui.PRIMARY, () -> {
                         if (!partial) return;

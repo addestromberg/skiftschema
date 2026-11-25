@@ -343,7 +343,10 @@ public final class MainActivity extends Activity {
         sheetBack = back;
         FrameLayout overlay = new FrameLayout(this);
         overlay.setBackgroundColor(ui.c.scrim);
-        overlay.setOnClickListener(view -> closeSheet());
+        overlay.setOnClickListener(view -> {
+            if (center) closeSheet();
+            else dismissSheet();
+        });
         overlay.setContentDescription("Stäng");
         overlay.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         Ui.Stack sheet = ui.column(0);
@@ -362,17 +365,16 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 28) sheet.setAccessibilityPaneTitle(title);
         Ui.Stack body = ui.column(14);
         ui.pad(body, 23, center ? 19 : 12, 23, 24);
-        Ui.Stack heading = ui.row(9);
-        ui.weight(heading, ui.headline(title, 21));
-        if (!center) heading.addView(ui.iconButton(R.drawable.ic_close, "Stäng", true, this::closeSheet));
-        body.addView(heading);
+        body.addView(ui.headline(title, 21));
         if (subtitle != null) body.addView(ui.text(subtitle, 13, ui.c.muted, false));
         content.accept(body);
-        sheet.addView(ui.scroll(body));
+        ScrollView scroll = ui.scroll(body);
+        sheet.addView(scroll);
+        View panel = center ? sheet : new BottomDrawer(ui, sheet, scroll, this::dismissSheet);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int width = center ? Math.min((int) (screenWidth * .9f), ui.dp(400))
                 : Math.min(screenWidth, ui.dp(480));
-        overlay.addView(sheet, new FrameLayout.LayoutParams(width, Ui.WRAP,
+        overlay.addView(panel, new FrameLayout.LayoutParams(width, Ui.WRAP,
                 center ? Gravity.CENTER : Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
         Window window = dialog.getWindow();
         window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
