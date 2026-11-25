@@ -378,7 +378,6 @@ public final class MainActivity extends Activity {
         window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         configureWindow(window, overlay);
-        setBarAppearance(window, dark());
         dialog.setContentView(overlay);
         if (!dialog.isShowing()) {
             dialog.show();
@@ -388,6 +387,7 @@ public final class MainActivity extends Activity {
                         OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::closeSheet);
             }
         }
+        setBarAppearance(window, dark());
     }
 
     private void closeSheet() {
@@ -440,7 +440,7 @@ public final class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     private void setBarAppearance(Window window, boolean dark) {
         if (Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = window.getInsetsController();
+            WindowInsetsController controller = window.getDecorView().getWindowInsetsController();
             if (controller == null) return;
             int flags = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                     | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
