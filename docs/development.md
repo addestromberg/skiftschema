@@ -11,7 +11,7 @@ npm run preview
 
 Open http://localhost:8081/?demo=1 to review July 2027 with 5-skift, crew B, and yellow vacation. Open http://localhost:8081/ without the query to review onboarding and the calendar for the current date. These previews use separate browser storage. The demo freezes the clock. The browser simulates phone-calendar actions. No web app is published.
 
-Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From that directory, run `./gradlew :app:assembleDebug :app:lintDebug`. Use `./gradlew :app:installDebug` with a connected phone or emulator to verify the calendar provider, Android permissions, and touch gestures. The Android build bundles the matching JSON files in `data/`. Keep release signing credentials outside Git.
+Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From that directory, run `./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`. With an Android 35 emulator connected, run `./gradlew :app:connectedDebugAndroidTest` to check the bundled rosters, profile compatibility, and calendar-provider writes. GitHub Actions runs the same checks on `Android`, on `fix-android-*` branches, and on pull requests targeting `Android`. Use `./gradlew :app:installDebug` for manual checks such as calendar gestures. The Android build bundles the matching JSON files in `data/`. Keep release signing credentials outside Git.
 
 ## Scheduling rules
 

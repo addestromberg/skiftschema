@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -81,6 +83,43 @@ public class ProfileStoreTest {
             assertEquals(-1, input.read());
         }
         assertArrayEquals(corruptFile, preserved);
+    }
+
+    @Test public void opensAndUpdatesAnExistingExpoSqliteProfile() throws Exception {
+        try (SQLiteDatabase expo = SQLiteDatabase.openOrCreateDatabase(database, null)) {
+            expo.enableWriteAheadLogging();
+            expo.execSQL("CREATE TABLE state (id TEXT PRIMARY KEY, value TEXT NOT NULL)");
+            expo.execSQL("INSERT INTO state (id, value) VALUES ('profile', ?)", new Object[]{"""
+                    {"prefs":{"unit":"five","appearance":"dark","accent":"nord","crews":{"five":"B","six":"D"},
+                    "vacation":{"five:2027":"yellow"},"overrides":{"five:2027":{"cutoff":"05:30",
+                    "weekdayEm":"14:00","weekdayNa":"22:00","weekendNa":"18:00"}},
+                    "export":{"enabled":true,"sync":true,"pending":true,"calendarId":"42","reminder":10,
+                    "categories":{"regular":false,"overtime":true,"vacation":true}}},
+                    "overtime":{"five:2027-07-13:EM":{"unit":"five","date":"2027-07-13","slot":"EM",
+                    "crew":"D","start":1815480000000,"end":1815494400000}}}
+                    """});
+
+            Profile profile = store.load();
+            assertEquals("five", profile.unit);
+            assertEquals("D", profile.crews.get("six"));
+            assertEquals("yellow", profile.vacation.get("five:2027"));
+            assertEquals(LocalTime.of(5, 30), profile.overrides.get("five:2027").cutoff());
+            assertEquals(Long.valueOf(42), profile.export.calendarId);
+            assertEquals(Integer.valueOf(10), profile.export.reminder);
+            assertTrue(profile.export.pending);
+            Schedule.Work overtime = profile.overtime.get("five:2027-07-13:EM");
+            assertEquals(new Schedule.Shift("five", LocalDate.of(2027, 7, 13), 1, "D"), overtime.shift());
+            assertEquals(new Schedule.Span(1815480000000L, 1815494400000L), overtime.span());
+
+            profile.appearance = "light";
+            store.save(profile.json());
+            try (Cursor row = expo.rawQuery("SELECT value FROM state WHERE id = 'profile'", null)) {
+                assertTrue(row.moveToFirst());
+                Profile saved = Profile.parse(row.getString(0));
+                assertEquals("light", saved.appearance);
+                assertEquals(overtime, saved.overtime.get(overtime.shift().key()));
+            }
+        }
     }
 
     private void putProfile(String json) {
