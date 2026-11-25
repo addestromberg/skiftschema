@@ -30,6 +30,7 @@ final class CalendarPage {
     boolean week;
     private LocalDate lastTap;
     private long lastTapAt;
+    private long touchUpAt;
     private LocalDate today;
     private int pickerYear;
     private Ui ui;
@@ -328,9 +329,11 @@ final class CalendarPage {
     }
 
     private void tap(LocalDate day) {
+        long time = touchUpAt == 0 ? SystemClock.uptimeMillis() : touchUpAt;
+        touchUpAt = 0;
         if (!week) {
-            long time = SystemClock.uptimeMillis();
-            if (day.equals(lastTap) && time - lastTapAt <= 350) {
+            long elapsed = time - lastTapAt;
+            if (day.equals(lastTap) && elapsed >= 0 && elapsed <= 350) {
                 moveTo(true, day, day);
                 return;
             }
@@ -412,6 +415,15 @@ final class CalendarPage {
         private boolean multiple;
 
         SwipeGrid() { super(app); }
+
+        @Override public boolean dispatchTouchEvent(MotionEvent event) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_UP -> touchUpAt = event.getEventTime();
+                case MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL -> touchUpAt = 0;
+                default -> { }
+            }
+            return super.dispatchTouchEvent(event);
+        }
 
         @Override public boolean onInterceptTouchEvent(MotionEvent event) {
             switch (event.getActionMasked()) {
