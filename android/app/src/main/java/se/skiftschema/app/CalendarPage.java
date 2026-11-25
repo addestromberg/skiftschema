@@ -1,11 +1,15 @@
 package se.skiftschema.app;
 
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -22,6 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 
 final class CalendarPage {
+    private enum Transition { NONE, NEXT, PREVIOUS, ZOOM_IN, ZOOM_OUT }
+
     private final MainActivity app;
     LocalDate anchor;
     LocalDate selected;
@@ -38,6 +44,13 @@ final class CalendarPage {
     private Ui.Stack hero;
     private Schedule.Work displayedWork;
     private long daysUntilWork;
+    private Ui.Stack dateButton;
+    private TextView periodTitle;
+    private View previousPeriod;
+    private View nextPeriod;
+    private TextView monthTab;
+    private TextView weekTab;
+    private SwipeGrid swipeGrid;
     private Ui.Stack footer;
     private boolean covered;
     private final Map<LocalDate, Cell> dayViews = new LinkedHashMap<>();
@@ -56,14 +69,8 @@ final class CalendarPage {
     void build(Ui.Stack screen) {
         ui = app.ui;
         c = ui.c;
-        Profile profile = app.profile;
-        String unit = profile.unit;
-        today = app.schedule.activeDay(profile, app.now());
+        today = app.schedule.activeDay(app.profile, app.now());
         if (anchor == null) anchor = today;
-        LocalDate start = week ? Schedule.weekStart(anchor) : YearMonth.from(anchor).atDay(1);
-        List<LocalDate> days = Schedule.cells(anchor, week);
-        covered = week ? days.stream().anyMatch(day -> app.schedule.roster(unit, day.getYear()) != null)
-                : app.schedule.roster(unit, start.getYear()) != null;
 
         screen.addView(ui.top(null, null));
         Ui.Stack body = ui.column(13);
@@ -77,59 +84,103 @@ final class CalendarPage {
         body.addView(hero, heroParams);
         updateHero();
 
+        buildNavigation(body);
+        swipeGrid = new SwipeGrid();
+        body.addView(swipeGrid);
+        footer = ui.column(0);
+        body.addView(footer);
+        showPeriod(Transition.NONE, null);
+        ScrollView scroll = ui.scroll(body);
+        app.pageScroll = scroll;
+        ui.stretch(screen, scroll);
+    }
+
+    private LocalDate periodStart() {
+        return week ? Schedule.weekStart(anchor) : YearMonth.from(anchor).atDay(1);
+    }
+
+    private void buildNavigation(Ui.Stack body) {
         Ui.Stack navigation = ui.row(4);
         ui.pad(navigation, 3, 0, 3, 0);
-        Ui.Stack date = ui.row(4);
-        date.setMinimumHeight(ui.dp(42));
-        TextView title = ui.headline(week ? "Vecka " + start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                : Schedule.month(start) + " " + start.getYear(), 29);
-        ui.oneLine(title);
-        date.addView(title, new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP, 1));
-        date.addView(ui.icon(R.drawable.ic_down, c.muted), ui.size(15, 15));
+        dateButton = ui.row(4);
+        dateButton.setMinimumHeight(ui.dp(42));
+        periodTitle = ui.headline("", 29);
+        ui.oneLine(periodTitle);
+        dateButton.addView(periodTitle, new LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP, 1));
+        dateButton.addView(ui.icon(R.drawable.ic_down, c.muted), ui.size(15, 15));
         // Keep the chevron beside the title while letting the controls keep their full width.
         FrameLayout titleSlot = new FrameLayout(app);
-        titleSlot.addView(date, new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP));
-        date.setContentDescription("Gå till månad, " + title.getText());
-        ui.buttonRole(date);
-        ui.click(date, () -> {
+        titleSlot.addView(dateButton, new FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP));
+        ui.buttonRole(dateButton);
+        ui.click(dateButton, () -> {
             lastTap = null;
-            pickerYear = start.getYear();
+            pickerYear = periodStart().getYear();
             monthPicker();
         });
         ui.weight(navigation, titleSlot);
-        navigation.addView(ui.iconButton(R.drawable.ic_left, week ? "Föregående vecka" : "Föregående månad", true,
-                () -> move(-1)));
+        previousPeriod = ui.iconButton(R.drawable.ic_left, "Föregående månad", true, () -> move(-1));
+        nextPeriod = ui.iconButton(R.drawable.ic_right, "Nästa månad", true, () -> move(1));
+        navigation.addView(previousPeriod);
         navigation.addView(ui.tag("Idag", c.action, c.paper, 8, () -> moveTo(week, today, null)));
-        navigation.addView(ui.iconButton(R.drawable.ic_right, week ? "Nästa vecka" : "Nästa månad", true,
-                () -> move(1)));
+        navigation.addView(nextPeriod);
         body.addView(navigation);
 
         Ui.Stack mode = ui.row(4);
         Ui.Stack buttons = ui.row(0);
         ui.pad(buttons, 4);
         ui.surface(buttons, c.subtle, 12, 0, 0);
-        for (boolean toWeek : new boolean[]{false, true}) {
-            boolean active = toWeek == week;
-            TextView tab = ui.centered(toWeek ? "Vecka" : "Månad", 12, active ? c.ink : c.muted, true);
-            tab.setMinimumWidth(ui.dp(75));
-            tab.setMinimumHeight(ui.dp(30));
-            tab.setSelected(active);
-            ui.surface(tab, active ? c.paper : c.subtle, 9, 0, 0);
-            ui.buttonRole(tab);
-            ui.click(tab, () -> {
-                if (toWeek != week) moveTo(toWeek, selected != null ? selected : days.contains(today) ? today : anchor, selected);
-            });
-            buttons.addView(tab, ui.size(Ui.WRAP, Ui.WRAP));
-        }
+        monthTab = modeTab(false);
+        weekTab = modeTab(true);
+        buttons.addView(monthTab, ui.size(Ui.WRAP, Ui.WRAP));
+        buttons.addView(weekTab, ui.size(Ui.WRAP, Ui.WRAP));
         mode.addView(buttons, ui.size(Ui.WRAP, Ui.WRAP));
         ui.space(mode);
+        Profile profile = app.profile;
+        String unit = profile.unit;
         mode.addView(ui.tag(Schedule.label(unit) + " · " + profile.crews.get(unit), () -> app.go("prefs")),
                 ui.size(Ui.WRAP, Ui.WRAP));
         body.addView(mode);
+    }
 
-        SwipeGrid wrapper = new SwipeGrid();
+    private TextView modeTab(boolean toWeek) {
+        TextView tab = ui.centered(toWeek ? "Vecka" : "Månad", 12, c.ink, true);
+        tab.setMinimumWidth(ui.dp(75));
+        tab.setMinimumHeight(ui.dp(30));
+        ui.buttonRole(tab);
+        ui.click(tab, () -> {
+            if (toWeek == week) return;
+            LocalDate day = selected;
+            if (day == null) day = Schedule.cells(anchor, week).contains(today) ? today : anchor;
+            moveTo(toWeek, day, selected);
+        });
+        return tab;
+    }
+
+    private void styleTab(TextView tab, boolean active) {
+        tab.setSelected(active);
+        tab.setTextColor(active ? c.ink : c.muted);
+        ui.surface(tab, active ? c.paper : c.subtle, 9, 0, 0);
+    }
+
+    private void showPeriod(Transition transition, LocalDate focus) {
+        LocalDate start = periodStart();
+        String title = week ? "Vecka " + start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                : Schedule.month(start) + " " + start.getYear();
+        periodTitle.setText(title);
+        dateButton.setContentDescription("Gå till månad, " + title);
+        previousPeriod.setContentDescription(week ? "Föregående vecka" : "Föregående månad");
+        nextPeriod.setContentDescription(week ? "Nästa vecka" : "Nästa månad");
+        styleTab(monthTab, !week);
+        styleTab(weekTab, week);
+
+        List<LocalDate> days = Schedule.cells(anchor, week);
+        String unit = app.profile.unit;
+        covered = week ? days.stream().anyMatch(day -> app.schedule.roster(unit, day.getYear()) != null)
+                : app.schedule.roster(unit, start.getYear()) != null;
+        Cell focalCell = dayViews.get(focus);
+        FrameLayout period = new FrameLayout(app);
         Ui.Stack grid = ui.column(5);
-        wrapper.addView(grid, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP));
+        period.addView(grid, new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP));
         dayViews.clear();
         if (week) {
             grid.addView(ui.text(Schedule.dateLabel(start) + " – " + Schedule.dateLabel(start.plusDays(6))
@@ -156,15 +207,10 @@ final class CalendarPage {
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP, Gravity.CENTER);
             params.leftMargin = ui.dp(12);
             params.rightMargin = ui.dp(12);
-            wrapper.addView(empty, params);
+            period.addView(empty, params);
         }
-        body.addView(wrapper);
-        footer = ui.column(0);
-        body.addView(footer);
+        swipeGrid.show(period, transition, focalCell == null ? null : focalCell.view);
         updateFooter();
-        ScrollView scroll = ui.scroll(body);
-        app.pageScroll = scroll;
-        ui.stretch(screen, scroll);
     }
 
     void clockChanged() {
@@ -361,11 +407,13 @@ final class CalendarPage {
         lastTap = null;
         anchor = week ? anchor.plusWeeks(direction) : anchor.plusMonths(direction);
         selected = null;
-        app.refresh();
+        showPeriod(direction > 0 ? Transition.NEXT : Transition.PREVIOUS, null);
     }
 
     private void moveTo(boolean showWeek, LocalDate day, LocalDate selection) {
         lastTap = null;
+        Transition transition = Transition.NONE;
+        if (showWeek != week) transition = showWeek ? Transition.ZOOM_IN : Transition.ZOOM_OUT;
         if (showWeek && !week) {
             previousAnchor = anchor;
             previousSelected = selected;
@@ -373,7 +421,8 @@ final class CalendarPage {
         week = showWeek;
         anchor = day;
         selected = selection;
-        app.refresh();
+        showPeriod(transition, day);
+        app.updateBack();
     }
 
     void back() {
@@ -411,10 +460,86 @@ final class CalendarPage {
     }
 
     private final class SwipeGrid extends FrameLayout {
+        private static final long TRANSITION_MS = 240;
+        private final DecelerateInterpolator easing = new DecelerateInterpolator();
+        private View period;
+        private View outgoing;
         private float x, y;
         private boolean multiple;
 
         SwipeGrid() { super(app); }
+
+        void show(View incoming, Transition transition, View focalDay) {
+            finishTransition();
+            View previous = period;
+            period = incoming;
+            boolean animate = transition != Transition.NONE && previous != null && previous.isLaidOut()
+                    && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled());
+            if (!animate) {
+                if (previous != null) removeView(previous);
+                addView(incoming, new LayoutParams(Ui.MATCH, Ui.WRAP));
+                return;
+            }
+
+            Rect focus = new Rect(0, 0, getWidth(), getHeight());
+            if (focalDay != null) {
+                focalDay.getDrawingRect(focus);
+                offsetDescendantRectToMyCoords(focalDay, focus);
+            }
+            // The outgoing grid keeps its bounds but leaves layout, touch, and accessibility.
+            outgoing = previous;
+            getOverlay().add(previous);
+            addView(incoming, new LayoutParams(Ui.MATCH, Ui.WRAP));
+            var exit = previous.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
+            var enter = incoming.animate().setDuration(TRANSITION_MS).setInterpolator(easing).withLayer();
+            if (transition == Transition.NEXT || transition == Transition.PREVIOUS) {
+                float offset = transition == Transition.NEXT ? getWidth() : -getWidth();
+                incoming.setTranslationX(offset);
+                exit.translationX(-offset);
+                enter.translationX(0);
+            } else {
+                boolean zoomIn = transition == Transition.ZOOM_IN;
+                previous.setPivotX(focus.exactCenterX());
+                previous.setPivotY(focus.exactCenterY());
+                incoming.setPivotX(focus.exactCenterX());
+                incoming.setPivotY(focus.exactCenterY());
+                float startScale = zoomIn ? .88f : 1.12f;
+                float endScale = zoomIn ? 1.12f : .88f;
+                incoming.setScaleX(startScale);
+                incoming.setScaleY(startScale);
+                incoming.setAlpha(0);
+                exit.scaleX(endScale).scaleY(endScale).alpha(0);
+                enter.scaleX(1).scaleY(1).alpha(1);
+            }
+            exit.withEndAction(() -> {
+                if (outgoing == previous) {
+                    getOverlay().remove(previous);
+                    outgoing = null;
+                }
+            }).start();
+            enter.start();
+        }
+
+        private void finishTransition() {
+            if (period != null) {
+                period.animate().cancel();
+                period.setTranslationX(0);
+                period.setScaleX(1);
+                period.setScaleY(1);
+                period.setAlpha(1);
+            }
+            if (outgoing != null) {
+                View previous = outgoing;
+                outgoing = null;
+                previous.animate().cancel();
+                getOverlay().remove(previous);
+            }
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            finishTransition();
+            super.onDetachedFromWindow();
+        }
 
         @Override public boolean dispatchTouchEvent(MotionEvent event) {
             switch (event.getActionMasked()) {

@@ -462,7 +462,7 @@ public final class MainActivity extends Activity {
         return !"calendar".equals(route) || calendar.week;
     }
 
-    private void updateBack() {
+    void updateBack() {
         if (Build.VERSION.SDK_INT < 33 || handlesBack() == backRegistered) return;
         backRegistered = handlesBack();
         if (backRegistered) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
