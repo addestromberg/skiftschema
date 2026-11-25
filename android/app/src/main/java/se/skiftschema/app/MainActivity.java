@@ -625,12 +625,13 @@ public final class MainActivity extends Activity {
     }
 
     void sync(boolean manual) {
-        if (!profile.export.enabled || (!manual && (!profile.export.sync || profile.export.pending))) return;
+        if (!profile.export.enabled || (!manual && !profile.export.sync)) return;
         if (calendarBusy) {
             retryAutomatic |= !manual;
             if (manual) notice("Kalendern uppdateras redan. Försök igen om en stund.");
             return;
         }
+        if (!manual && profile.export.pending) return;
         if (manual) calendarPermission(granted -> {
             if (granted) exportCalendar(true);
             else denyCalendar(true);
@@ -674,7 +675,7 @@ public final class MainActivity extends Activity {
                 save();
                 calendarFinished();
                 if (!completed) notice("Telefonens kalender kunde inte uppdateras. Försök igen i Kalenderexport.");
-                else if (manual) notice("Kalendern är uppdaterad.");
+                else if (manual && !calendarBusy && !profile.export.pending) notice("Kalendern är uppdaterad.");
             });
         });
     }
