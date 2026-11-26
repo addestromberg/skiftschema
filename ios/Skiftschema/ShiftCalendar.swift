@@ -532,15 +532,16 @@ struct OvertimeEditor: View {
         self.shift = shift
         self.complete = complete
         self.back = back
-        full = schedule.span(profile.wrappedValue, shift)
+        let official = schedule.span(profile.wrappedValue, shift)
+        full = official
         let existing = profile.wrappedValue.overtime[shift.id]
         let initial = existing.flatMap { value in
-            let start = max(value.start, full.start)
-            let end = min(value.end, full.end)
+            let start = max(value.start, official.start)
+            let end = min(value.end, official.end)
             return start < end ? Span(start: start, end: end) : nil
         }
-        _span = State(initialValue: initial ?? full)
-        _partial = State(initialValue: existing.map { $0 != full } ?? false)
+        _span = State(initialValue: initial ?? official)
+        _partial = State(initialValue: existing.map { $0 != official } ?? false)
     }
 
     var body: some View {
