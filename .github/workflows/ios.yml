@@ -1,0 +1,32 @@
+name: iOS checks
+
+on:
+  push:
+    branches: [ios]
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'data/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build iOS simulator app
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build app
+        run: |
+          xcodebuild -project ios/Skiftschema.xcodeproj -scheme Skiftschema \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build
+      - name: Verify shared roster resources
+        run: |
+          bundle=ios/DerivedData/Build/Products/Debug-iphonesimulator/Skiftschema.app/data
+          for roster in data/five-????.json data/six-????.json; do
+            cmp "$roster" "$bundle/${roster##*/}"
+          done

@@ -2,7 +2,7 @@
 
 ![Vibecoded with Codex](docs/codex-badge.svg)
 
-Skiftschema is a Swedish-language Android app built with Java and native Android views. It includes the 2026 and 2027 rosters for **5-skift** and **6-skift**. The schedules work offline, and your preferences and overtime are stored on your device.
+Skiftschema is a Swedish-language shift calendar with native Android and iOS apps. It includes the 2026 and 2027 rosters for **5-skift** and **6-skift**. The schedules work offline, and your preferences and overtime are stored on your device.
 
 <img src="docs/screenshots/month.png" width="24%" alt="Monthly calendar"><img src="docs/screenshots/week.png" width="24%" alt="Weekly calendar"><img src="docs/screenshots/day.png" width="24%" alt="Partial overtime editor"><img src="docs/screenshots/palettes.png" width="24%" alt="Color palette settings in dark mode">
 
@@ -23,6 +23,8 @@ Enable **Preferenser → Kalenderexport**, choose what to export, then tap **Upp
 On Android, the exported calendar is stored locally. If it’s missing from Google Calendar’s menu, open **☰ → Inställningar → Hantera konton** and enable **se.skiftschema.app** under **Konton utanför Google**. Then check **Skiftschema** in the calendar menu.
 
 ## Development
+
+For the SwiftUI app, see the [iOS build instructions](ios/README.md).
 
 Open `android/` in Android Studio, or build from the command line with JDK 17 and Android SDK Platform 35. The app supports Android 7.0 (API 24) and later.
 
