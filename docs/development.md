@@ -1,17 +1,10 @@
 # Skiftschema development
 
-The editable design is [Skiftschema.figcraft](Skiftschema.figcraft). It specifies the Swedish screens, layout, and the six palettes in Light and Dark. System follows the device. Select the palette under **Utseende → Färgpalett**. Android palette tokens live in `android/app/src/main/java/se/skiftschema/app/Palette.java`. The Expo preview uses `src/theme.tsx`. Havsblå, Plommon, and Bärnsten use Material HCT tones. Nord adapts the [Nord color palettes](https://www.nordtheme.com/docs/colors-and-palettes/). Cthulhu Deep One adapts the [Omarchy theme by sonderbydk](https://github.com/sonderbydk/omarchy-cthulhu-deep-one-theme) and pairs its dark colors with a new Light version. Treat the dated roster PDFs as the source for actual assignments, closures, and vacation periods. The 2027 five-shift PDF shows yellow from 19 July to 8 August and green from 9 to 29 August.
+The editable design is [Skiftschema.figcraft](Skiftschema.figcraft). It specifies the Swedish screens, layout, and the six palettes in Light and Dark. System follows the device. Select the palette under **Utseende → Färgpalett**. Android palette tokens live in `android/app/src/main/java/se/skiftschema/app/Palette.java`. Havsblå, Plommon, and Bärnsten use Material HCT tones. Nord adapts the [Nord color palettes](https://www.nordtheme.com/docs/colors-and-palettes/). Cthulhu Deep One adapts the [Omarchy theme by sonderbydk](https://github.com/sonderbydk/omarchy-cthulhu-deep-one-theme) and pairs its dark colors with a new Light version. Treat the dated roster PDFs as the source for actual assignments, closures, and vacation periods. The 2027 five-shift PDF shows yellow from 19 July to 8 August and green from 9 to 29 August.
 
-## Preview and builds
+## Android builds and checks
 
-```sh
-npm ci
-npm run preview
-```
-
-Open http://localhost:8081/?demo=1 to review July 2027 with 5-skift, crew B, and yellow vacation. Open http://localhost:8081/ without the query to review onboarding and the calendar for the current date. These previews use separate browser storage. The demo freezes the clock. The browser simulates phone-calendar actions. No web app is published.
-
-Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From that directory, run `./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`. With an Android 35 emulator connected, run `./gradlew :app:connectedDebugAndroidTest` to check the bundled rosters, profile compatibility, and calendar-provider writes. GitHub Actions runs the same checks on `Android`, on `fix-android-*` branches, and on pull requests targeting `Android`. Use `./gradlew :app:installDebug` for manual checks such as calendar gestures. The Android build bundles the matching JSON files in `data/`. Keep release signing credentials outside Git.
+Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From that directory, run `./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`. With an Android 35 emulator connected, run `./gradlew :app:connectedDebugAndroidTest` to check the bundled rosters, profile compatibility, and calendar-provider writes. GitHub Actions runs these checks on `main`, `Android`, and `fix-android-*` branches and on pull requests targeting `main` or `Android`. Use `./gradlew :app:installDebug` for manual checks such as calendar gestures. The Android build bundles the matching JSON files in `data/`. Keep release signing credentials outside Git.
 
 ## Scheduling rules
 
@@ -25,13 +18,13 @@ Open `android/` in Android Studio with JDK 17 and Android SDK Platform 35. From 
 
 ## Import another year
 
-The PDF reader supports the four original 2026 and 2027 rosters. Place local copies in `docs/` to reproduce the bundled JSON with the commands below. Git ignores those PDF files.
+Run the importer from the repository root with Python 3. The PDF reader also requires `pdftotext` from Poppler. It supports the four original 2026 and 2027 rosters. Place local copies in `docs/` to reproduce the bundled JSON with the commands below. Git ignores those PDF files.
 
 ```sh
-npm run import:schedule -- docs/Skiftschema-2026.pdf --schedule five --year 2026
-npm run import:schedule -- docs/Skiftschema-Energi-2026.pdf --schedule six --year 2026
-npm run import:schedule -- docs/Skiftschema-2027.pdf --schedule five
-npm run import:schedule -- docs/Skiftschema-Energi-2027.pdf --schedule six
+python3 scripts/import_schedule.py docs/Skiftschema-2026.pdf --schedule five --year 2026
+python3 scripts/import_schedule.py docs/Skiftschema-Energi-2026.pdf --schedule six --year 2026
+python3 scripts/import_schedule.py docs/Skiftschema-2027.pdf --schedule five
+python3 scripts/import_schedule.py docs/Skiftschema-Energi-2027.pdf --schedule six
 ```
 
 For a new year, copy the approved data into a spreadsheet with these sheet and column names. This normalized template makes the import independent of the original print layout.
@@ -42,4 +35,4 @@ For a new year, copy the approved data into a spreadsheet with these sheet and c
 | Dagar | `date`, `FM`, `EM`, `NA`, `closure`, `note` | One date per row. Use crew letters, leave weekend EM blank, and give five-shift closures an explicit label with blank shifts. |
 | Semester | `color`, `from`, `to` | Inclusive dates for `blue`, `red`, `yellow`, or `green`. Omit for 6-skift. |
 
-Use `YYYY-MM-DD` or spreadsheet date cells for dates. Use 24-hour `HH:MM` times. Run `npm run import:schedule -- path/to/new-roster.xlsx`. The importer validates coverage, crew counts, shift ordering, and vacation ranges. Review the generated data against the official roster and retain the earlier JSON files. A new app build bundles all recognized files in `data/`.
+Use `YYYY-MM-DD` or spreadsheet date cells for dates. Use 24-hour `HH:MM` times. Run `python3 scripts/import_schedule.py path/to/new-roster.xlsx`. The importer validates coverage, crew counts, shift ordering, and vacation ranges. Review the generated data against the official roster and retain the earlier JSON files. A new app build bundles all recognized files in `data/`.

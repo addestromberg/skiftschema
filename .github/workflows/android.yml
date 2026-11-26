@@ -3,10 +3,12 @@ name: Android checks
 on:
   push:
     branches:
+      - main
       - Android
       - 'fix-android-*'
   pull_request:
     branches:
+      - main
       - Android
 
 permissions:
