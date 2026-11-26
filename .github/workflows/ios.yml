@@ -18,6 +18,8 @@ jobs:
     name: Run Skiftschema on iPhone Simulator
     runs-on: macos-15
     timeout-minutes: 15
+    env:
+      APP_BUNDLE: ios/DerivedData/Build/Products/Debug-iphonesimulator/Skiftschema.app
     steps:
       - uses: actions/checkout@v6
       - name: Select an available iPhone simulator
@@ -33,15 +35,33 @@ jobs:
           sys.exit("No available iPhone simulator")
           ')
           echo "SIMULATOR_ID=$udid" >> "$GITHUB_ENV"
+      - name: Build app for the selected iPhone
+        run: |
+          xcodebuild -project ios/Skiftschema.xcodeproj -scheme Skiftschema \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES build
+      - name: Boot iPhone and launch Skiftschema
+        timeout-minutes: 5
+        run: |
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcrun simctl install "$SIMULATOR_ID" "$APP_BUNDLE"
+          xcrun simctl launch "$SIMULATOR_ID" se.skiftschema.app
+          sleep 5
+          xcrun simctl io "$SIMULATOR_ID" screenshot "$RUNNER_TEMP/skiftschema-launch.png"
+      - name: Upload launch screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: skiftschema-iphone-launch
+          path: ${{ runner.temp }}/skiftschema-launch.png
+          if-no-files-found: error
       - name: Run the simulator preview
+        timeout-minutes: 6
         run: |
           xcodebuild -project ios/Skiftschema.xcodeproj -scheme Skiftschema \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath ios/DerivedData -resultBundlePath "$RUNNER_TEMP/SimulatorPreview.xcresult" \
-            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES test
       - name: Verify shared roster resources
-        env:
-          APP_BUNDLE: ios/DerivedData/Build/Products/Debug-iphonesimulator/Skiftschema.app
         run: |
           /usr/libexec/PlistBuddy -c "Print NSCalendarsFullAccessUsageDescription" "$APP_BUNDLE/Info.plist"
           bundle="$APP_BUNDLE/data"
