@@ -81,3 +81,36 @@ jobs:
         with:
           name: skiftschema-iphone-screenshots
           path: ${{ runner.temp }}/skiftschema-screenshots
+
+  package:
+    name: Build unsigned iPhone IPA
+    if: github.ref == 'refs/heads/ios' && github.event_name != 'pull_request'
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build for physical iPhones
+        run: |
+          xcodebuild -project ios/Skiftschema.xcodeproj -scheme Skiftschema \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/device-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Package and verify IPA
+        run: |
+          app="$RUNNER_TEMP/device-build/Build/Products/Release-iphoneos/Skiftschema.app"
+          platform=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$app/Info.plist")
+          test "$platform" = iPhoneOS
+          test "$(xcrun lipo -archs "$app/Skiftschema")" = arm64
+          xcrun vtool -show-build "$app/Skiftschema" | grep -E 'platform +IOS$'
+
+          staging="$RUNNER_TEMP/ipa-staging"
+          mkdir -p "$staging/Payload"
+          ditto "$app" "$staging/Payload/Skiftschema.app"
+          ipa="$RUNNER_TEMP/Skiftschema-unsigned.ipa"
+          ditto -c -k --keepParent "$staging/Payload" "$ipa"
+          unzip -tq "$ipa"
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Skiftschema-unsigned-IPA
+          path: ${{ runner.temp }}/Skiftschema-unsigned.ipa
+          if-no-files-found: error
