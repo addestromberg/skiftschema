@@ -53,24 +53,39 @@ struct AppContent: View {
     @State private var preferenceRevision = 0
     @State private var overtimeRevision = 0
     @State private var message: String?
+    @State private var tab = Tab.schedule
+
+    private enum Tab { case schedule, preferences }
 
     private var palette: Palette { Palette(profile.palette, dark: colorScheme == .dark) }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if profile.onboarded {
-                    ShiftCalendar(schedule: schedule, profile: $profile, overtimeChanged: overtimeChanged) {
+        Group {
+            if profile.onboarded {
+                TabView(selection: $tab) {
+                    NavigationStack {
+                        ShiftCalendar(schedule: schedule, profile: $profile, overtimeChanged: overtimeChanged) {
+                            tab = .preferences
+                        }
+                    }
+                    .tabItem { Label("Schema", systemImage: "calendar") }
+                    .tag(Tab.schedule)
+
+                    NavigationStack {
                         PreferencesView(schedule: schedule, profile: $profile, busy: busy,
                                         sync: { updateCalendar() }, remove: remove,
                                         preferencesChanged: preferencesChanged)
                     }
-                } else {
+                    .tabItem { Label("Preferenser", systemImage: "slider.horizontal.3") }
+                    .tag(Tab.preferences)
+                }
+            } else {
+                NavigationStack {
                     OnboardingView(schedule: schedule, profile: $profile)
                 }
             }
-            .background(palette.canvas.ignoresSafeArea())
         }
+        .background(palette.canvas.ignoresSafeArea())
         .environment(\.shiftPalette, palette)
         .environment(\.locale, RosterDate.locale)
         .tint(palette.action)

@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct ShiftCalendar<Preferences: View>: View {
+struct ShiftCalendar: View {
     let schedule: Schedule
     @Binding var profile: Profile
     let overtimeChanged: () -> Void
-    @ViewBuilder let preferences: () -> Preferences
+    let showPreferences: () -> Void
 
     @Environment(\.shiftPalette) private var c
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -36,14 +36,18 @@ struct ShiftCalendar<Preferences: View>: View {
             .background(c.canvas)
         }
         .foregroundStyle(c.ink)
-        .navigationTitle("Skiftschema")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(destination: preferences) {
-                    Image(systemName: "gearshape")
+            ToolbarItem(placement: .topBarLeading) {
+                HStack(spacing: 9) {
+                    Image(systemName: "calendar")
+                        .foregroundStyle(c.onAction)
+                        .frame(width: 30, height: 30)
+                        .background(c.action, in: RoundedRectangle(cornerRadius: 8))
+                        .accessibilityHidden(true)
+                    Text("Skiftschema").font(.headline).foregroundStyle(c.ink)
+                        .accessibilityAddTraits(.isHeader)
                 }
-                .accessibilityLabel("Preferenser")
             }
         }
         .sheet(isPresented: $showMonths) { monthPicker }
@@ -119,7 +123,7 @@ struct ShiftCalendar<Preferences: View>: View {
             } label: {
                 HStack(spacing: 4) {
                     Text(week ? "Vecka \(weekNumber)" : monthTitle)
-                        .font(.system(size: 27, weight: .bold, design: .serif))
+                        .font(.system(size: 27, weight: .bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.66)
                     Image(systemName: "chevron.down").font(.caption.bold()).foregroundStyle(c.muted)
@@ -163,7 +167,7 @@ struct ShiftCalendar<Preferences: View>: View {
             .padding(4)
             .background(c.subtle, in: RoundedRectangle(cornerRadius: 12))
             Spacer()
-            NavigationLink(destination: preferences) {
+            Button(action: showPreferences) {
                 Text("\(profile.kind.label) · \(profile.crew)")
                     .font(.caption.bold())
                     .padding(.horizontal, 10).padding(.vertical, 7)
@@ -227,10 +231,48 @@ struct ShiftCalendar<Preferences: View>: View {
         let fill = vacation != nil ? c.vac : chosen || current ? c.mine :
             !inMonth ? c.subtle : RosterDate.weekend(day) ? c.weekend : c.paper
         let shape = RoundedRectangle(cornerRadius: week ? 12 : 8)
+        let content = cellContents(day, today: current, inMonth: inMonth, extra: extra,
+                                   closure: assignment?.closure, shifts: shifts, vacation: vacation)
+        let border = chosen || current ? c.action : c.line
+        let borderWidth: CGFloat = chosen ? 2 : current ? 1.3 : 1
+        let styled = content
+            .padding(week ? 6 : 3)
+            .frame(maxWidth: .infinity, minHeight: week ? 58 : 73, alignment: week ? .center : .topLeading)
+            .background(fill, in: shape)
+            .overlay(shape.strokeBorder(border, lineWidth: borderWidth))
+            .contentShape(Rectangle())
+
+        let doubleTap = TapGesture(count: 2).onEnded {
+            if week { selected = day } else { showWeek(from: focus, day: day, selection: day) }
+        }
+        let tap = TapGesture().onEnded { selected = day }
+        let longPress = LongPressGesture(minimumDuration: 0.45).onEnded { _ in open(day) }
+        let gestures = longPress.exclusively(before: doubleTap.exclusively(before: tap))
+
+        var description = [RosterDate.label(day)]
+        if vacation != nil {
+            description.append("Semester")
+        } else if let closure = assignment?.closure {
+            description.append(closure)
+        }
+        description += shifts.map { "\($0.slot.rawValue) skift \($0.crew)" }
+        if extra { description.append("Övertid") }
+
+        return styled
+            .gesture(gestures)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(description.joined(separator: ", "))
+            .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
+            .accessibilityAction { selected = day }
+            .accessibilityAction(named: Text("Visa pass")) { open(day) }
+    }
+
+    private func cellContents(_ day: Date, today: Bool, inMonth: Bool, extra: Bool,
+                              closure: String?, shifts: [Shift], vacation: Vacation?) -> some View {
         let layout = week ? AnyLayout(HStackLayout(spacing: 5)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
         return layout {
-            dayLabel(day, current: current, inMonth: inMonth, extra: extra, vacation: vacation)
-            if let closure = assignment?.closure {
+            dayLabel(day, current: today, inMonth: inMonth, extra: extra, vacation: vacation)
+            if let closure {
                 Text(vacation == nil ? closure : "Semester")
                     .font(.system(size: week ? 12 : 8, weight: .semibold))
                     .foregroundStyle(vacation == nil ? c.muted : c.vacInk)
@@ -248,22 +290,6 @@ struct ShiftCalendar<Preferences: View>: View {
                 ForEach(shifts) { shiftLabel($0, vacation: vacation != nil) }
             }
         }
-        .padding(week ? 6 : 3)
-        .frame(maxWidth: .infinity, minHeight: week ? 58 : 73, alignment: week ? .center : .topLeading)
-        .background(fill, in: shape)
-        .overlay(shape.strokeBorder(chosen || current ? c.action : c.line, lineWidth: chosen ? 2 : current ? 1.3 : 1))
-        .contentShape(Rectangle())
-        .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in open(day) }
-            .exclusively(before: TapGesture(count: 2).onEnded {
-                if week { selected = day } else { showWeek(from: focus, day: day, selection: day) }
-            }.exclusively(before: TapGesture().onEnded { selected = day })))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(([RosterDate.label(day)] + [vacation.map { _ in "Semester" } ?? assignment?.closure]
-            .compactMap { $0 } + shifts.map { "\($0.slot.rawValue) skift \($0.crew)" } + (extra ? ["Övertid"] : []))
-            .joined(separator: ", "))
-        .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { selected = day }
-        .accessibilityAction(named: Text("Visa pass")) { open(day) }
     }
 
     private func dayLabel(_ day: Date, current: Bool, inMonth: Bool, extra: Bool, vacation: Vacation?) -> some View {
@@ -374,7 +400,7 @@ struct ShiftCalendar<Preferences: View>: View {
             .foregroundStyle(c.ink)
             .background(c.canvas)
             .navigationTitle("Gå till månad")
-            .navigationBarTitleDisplayMode(.inline)
+           .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Stäng") { showMonths = false } } }
         }
         .presentationDetents([.medium])
@@ -384,33 +410,75 @@ struct ShiftCalendar<Preferences: View>: View {
     private func dayDetails(_ day: Date) -> some View {
         let entry = schedule.assignment(profile.kind, day)
         let vacation = schedule.vacation(profile, day)
-        return Form {
-            if let vacation { Section { Label("Semester · \(vacation.label)", systemImage: "sun.max") } }
-            if let closure = entry?.closure { Section { Text(closure) } }
-            if let note = entry?.note { Section { Text(note) } }
-            if entry == nil { Text("Inget schema för dagen") }
-            ForEach(schedule.shifts(profile.kind, day)) { shift in
-                let own = shift.crew == profile.crew
-                let extra = profile.overtime[shift.id]
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(shift.slot.rawValue) · \(shift.slot.title) · Skift \(shift.crew)").font(.headline)
-                    Text(schedule.span(profile, shift).label).foregroundStyle(c.muted)
-                    if let extra { Text("Övertid · \(extra.label)").foregroundStyle(c.otInk) }
+        let shifts = schedule.shifts(profile.kind, day)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 9) {
+                Text(shifts.isEmpty ? profile.kind.label : "\(profile.kind.label) · Välj pass för övertid")
+                    .font(.subheadline).foregroundStyle(c.muted)
+                if let vacation {
+                    Label("Semester · \(vacation.label)", systemImage: "sun.max")
+                        .font(.headline)
+                        .foregroundStyle(c.vacInk)
+                        .padding(11)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(c.vac, in: RoundedRectangle(cornerRadius: 12))
+                }
+                if shifts.isEmpty && vacation == nil {
+                    Text(entry?.closure ?? (entry == nil ? "Inget schema tillgängligt" : "Inga pass"))
+                        .font(.headline)
+                }
+                ForEach(shifts) { shift in
+                    let own = shift.crew == profile.crew
+                    let extra = profile.overtime[shift.id]
                     if !own || extra != nil {
-                        Button(extra == nil ? "Lägg till övertid" : "Ändra övertid") { editingShift = shift }
-                    } else if vacation == nil {
-                        Text("Ditt pass").font(.caption.bold()).foregroundStyle(c.mineInk)
+                        Button { editingShift = shift } label: {
+                            shiftCard(shift, own: own, extra: extra)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(extra == nil ? "Markera övertid" : "Hantera övertid")
+                    } else {
+                        shiftCard(shift, own: own, extra: extra)
                     }
                 }
-                .listRowBackground(c.paper)
+                if let note = entry?.note {
+                    Text("Schemaanteckning · \(note)").font(.caption).foregroundStyle(c.muted)
+                }
             }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .foregroundStyle(c.ink)
-        .scrollContentBackground(.hidden)
         .background(c.canvas)
         .navigationTitle(RosterDate.label(day))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Stäng") { presentedDay = nil } } }
+    }
+
+    private func shiftCard(_ shift: Shift, own: Bool, extra: Span?) -> some View {
+        let fill = extra != nil ? c.ot : own ? c.mine : c.paper
+        let shape = RoundedRectangle(cornerRadius: 14)
+        return HStack(spacing: 11) {
+            Text(shift.slot.rawValue)
+                .font(.caption.bold())
+                .foregroundStyle(extra != nil ? c.otInk : c.muted)
+                .frame(width: 36, height: 34)
+                .background(extra != nil ? c.paper : c.subtle, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(shift.slot.title) · Skiftlag \(shift.crew)").font(.subheadline.bold())
+                Text(schedule.span(profile, shift).label).foregroundStyle(c.muted).font(.caption)
+                if own { Text("Ditt skiftlag").font(.caption.bold()).foregroundStyle(c.mineInk) }
+                if let extra { Text("Övertid · \(extra.label)").font(.caption.bold()).foregroundStyle(c.otInk) }
+            }
+            Spacer(minLength: 0)
+            if !own || extra != nil {
+                Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(c.muted)
+            }
+        }
+        .padding(12)
+        .frame(minHeight: 64)
+        .background(fill, in: shape)
+        .overlay(shape.strokeBorder(c.line))
+        .accessibilityElement(children: .combine)
     }
 
     private func covered(_ focus: Date) -> Bool {

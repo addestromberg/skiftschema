@@ -48,7 +48,7 @@
                 CURRENT_PROJECT_VERSION = 1;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_KEY_CFBundleDisplayName = Skiftschema;
-                INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Skiftschema behöver kalenderåtkomst för att lägga till och uppdatera dina exporterade pass.";
+                INFOPLIST_FILE = Skiftschema/Info.plist;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
                 INFOPLIST_KEY_UILaunchScreen_Generation = YES;
                 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -65,7 +65,7 @@
                 CURRENT_PROJECT_VERSION = 1;
                 GENERATE_INFOPLIST_FILE = YES;
                 INFOPLIST_KEY_CFBundleDisplayName = Skiftschema;
-                INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Skiftschema behöver kalenderåtkomst för att lägga till och uppdatera dina exporterade pass.";
+                INFOPLIST_FILE = Skiftschema/Info.plist;
                 INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
                 INFOPLIST_KEY_UILaunchScreen_Generation = YES;
                 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;

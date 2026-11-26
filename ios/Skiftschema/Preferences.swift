@@ -107,6 +107,7 @@ struct PreferencesView: View {
     let remove: (ExportCategory, Bool) -> Void
     let preferencesChanged: () -> Void
     @Environment(\.shiftPalette) private var c
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Form {
@@ -159,7 +160,7 @@ struct PreferencesView: View {
             Section("Färgpalett") {
                 ForEach(Palette.choices.map { $0.0 }, id: \.self) { id in
                     let label = Palette.choices.first { $0.0 == id }?.1 ?? id
-                    let preview = Palette(id, dark: profile.appearance == "dark")
+                    let preview = Palette(id, dark: colorScheme == .dark)
                     Button { profile.palette = id } label: {
                         HStack {
                             Circle().fill(preview.action).frame(width: 18, height: 18)
