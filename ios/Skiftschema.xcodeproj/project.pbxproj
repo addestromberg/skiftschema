@@ -21,10 +21,10 @@
 		000000000000000000000016 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Skiftschema.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000017 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000018 = { isa = PBXBuildFile; fileRef = 000000000000000000000017; };
-		000000000000000000000001 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; }; buildConfigurationList = 00000000000000000000000E; compatibilityVersion = "Xcode 14.0"; developmentRegion = sv; knownRegions = (sv, en, Base); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000005, ); };
+		000000000000000000000001 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; }; buildConfigurationList = 00000000000000000000000E; compatibilityVersion = "Xcode 14.0"; developmentRegion = sv; knownRegions = (sv, en, Base); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000005, 00000000000000000000012C, ); };
 		000000000000000000000002 = { isa = PBXGroup; children = (000000000000000000000003, 000000000000000000000014, 000000000000000000000004, ); sourceTree = "<group>"; };
 		000000000000000000000003 = { isa = PBXGroup; children = (000000000000000000000064, 000000000000000000000065, 000000000000000000000066, 000000000000000000000067, 000000000000000000000068, 000000000000000000000069, 000000000000000000000017, ); path = Skiftschema; sourceTree = "<group>"; };
-		000000000000000000000004 = { isa = PBXGroup; children = (000000000000000000000016, ); name = Products; sourceTree = "<group>"; };
+		000000000000000000000004 = { isa = PBXGroup; children = (000000000000000000000016, 00000000000000000000012E, ); name = Products; sourceTree = "<group>"; };
 		000000000000000000000005 = { isa = PBXNativeTarget; buildConfigurationList = 00000000000000000000000F; buildPhases = (000000000000000000000006, 000000000000000000000007, 000000000000000000000008, ); buildRules = (); dependencies = (); name = Skiftschema; productName = Skiftschema; productReference = 000000000000000000000016; productType = "com.apple.product-type.application"; };
 		000000000000000000000006 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (0000000000000000000000C8, 0000000000000000000000C9, 0000000000000000000000CA, 0000000000000000000000CB, 0000000000000000000000CC, 0000000000000000000000CD, ); runOnlyForDeploymentPostprocessing = 0; };
 		000000000000000000000007 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -78,6 +78,30 @@
 			}; name = Release; };
 		00000000000000000000000E = { isa = XCConfigurationList; buildConfigurations = (00000000000000000000000A, 00000000000000000000000B, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		00000000000000000000000F = { isa = XCConfigurationList; buildConfigurations = (00000000000000000000000C, 00000000000000000000000D, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		00000000000000000000012C = { isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000133; buildPhases = (000000000000000000000131, 000000000000000000000132, ); buildRules = (); dependencies = (000000000000000000000136, ); name = SkiftschemaUITests; productName = SkiftschemaUITests; productReference = 00000000000000000000012E; productType = "com.apple.product-type.bundle.ui-testing"; };
+		00000000000000000000012D = { isa = PBXGroup; children = (00000000000000000000012F, ); path = SkiftschemaUITests; sourceTree = "<group>"; };
+		00000000000000000000012E = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkiftschemaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		00000000000000000000012F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorPreviewTests.swift; sourceTree = "<group>"; };
+		000000000000000000000130 = { isa = PBXBuildFile; fileRef = 00000000000000000000012F; };
+		000000000000000000000131 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000130, ); runOnlyForDeploymentPostprocessing = 0; };
+		000000000000000000000132 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		000000000000000000000133 = { isa = XCConfigurationList; buildConfigurations = (000000000000000000000134, 000000000000000000000135, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		000000000000000000000134 = { isa = XCBuildConfiguration; buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                PRODUCT_BUNDLE_IDENTIFIER = se.skiftschema.app.uitests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                TARGETED_DEVICE_FAMILY = "1,2";
+                TEST_TARGET_NAME = Skiftschema;
+            }; name = Debug; };
+		000000000000000000000135 = { isa = XCBuildConfiguration; buildSettings = {
+                GENERATE_INFOPLIST_FILE = YES;
+                PRODUCT_BUNDLE_IDENTIFIER = se.skiftschema.app.uitests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                TARGETED_DEVICE_FAMILY = "1,2";
+                TEST_TARGET_NAME = Skiftschema;
+            }; name = Release; };
+		000000000000000000000136 = { isa = PBXTargetDependency; target = 000000000000000000000005; targetProxy = 000000000000000000000137; };
+		000000000000000000000137 = { isa = PBXContainerItemProxy; containerPortal = 000000000000000000000001; proxyType = 1; remoteGlobalIDString = 000000000000000000000005; remoteInfo = Skiftschema; };
 	};
 	rootObject = 000000000000000000000001;
 }

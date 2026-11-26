@@ -1,6 +1,7 @@
 name: iOS checks
 
 on:
+  workflow_dispatch:
   push:
     branches: [ios]
   pull_request:
@@ -14,16 +15,30 @@ permissions:
 
 jobs:
   build:
-    name: Build iOS simulator app
+    name: Run Skiftschema on iPhone Simulator
     runs-on: macos-15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
-      - name: Build app
+      - name: Select an available iPhone simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, re, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          for runtime in sorted(runtimes, key=lambda value: tuple(map(int, re.findall(r"\d+", value))), reverse=True):
+              for device in runtimes[runtime]:
+                  if device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      sys.exit()
+          sys.exit("No available iPhone simulator")
+          ')
+          echo "SIMULATOR_ID=$udid" >> "$GITHUB_ENV"
+      - name: Run the simulator preview
         run: |
           xcodebuild -project ios/Skiftschema.xcodeproj -scheme Skiftschema \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath ios/DerivedData -resultBundlePath "$RUNNER_TEMP/SimulatorPreview.xcresult" \
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test
       - name: Verify shared roster resources
         env:
           APP_BUNDLE: ios/DerivedData/Build/Products/Debug-iphonesimulator/Skiftschema.app
@@ -33,3 +48,16 @@ jobs:
           for roster in data/five-????.json data/six-????.json; do
             cmp "$roster" "$bundle/${roster##*/}"
           done
+      - name: Export simulator screenshots
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/SimulatorPreview.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/SimulatorPreview.xcresult" \
+              --output-path "$RUNNER_TEMP/skiftschema-screenshots"
+          fi
+      - name: Upload simulator screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skiftschema-iphone-screenshots
+          path: ${{ runner.temp }}/skiftschema-screenshots
